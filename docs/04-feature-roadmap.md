@@ -42,9 +42,31 @@
 - Pagination support if dataset grows.
 
 ## Phase 5: Responsive and UX Polish
-- Mobile-friendly cards/list behavior.
-- Form usability and validation messages.
-- Empty/loading/error states.
+- Subphase 5A: High-impact UX foundation
+	- Always-visible URL import bar (inline extraction + manual fallback).
+	- Optimistic UI updates with rollback on API failure.
+	- Fast status actions (context menu / badge popover + micro-feedback).
+- Subphase 5B: Core interaction architecture
+	- Split-pane detail drawer flow (list stays visible, URL deep-link aware).
+	- Pipeline health segmented bar + key metrics + click-to-filter behavior.
+	- Tokenized visual foundation (semantic colors, spacing, motion primitives).
+- Subphase 5C: Information design and navigation
+	- Typography system (display + UI sans + mono roles).
+	- Desktop layout constraints (collapsible sidebar, centered max content width).
+	- List redesign (layered row info, stale-item attention signal, hover actions).
+	- Search polish (hit highlighting, zero-result quick-add, keyboard focus shortcuts).
+- Subphase 5D: Experience polish across devices
+	- Purposeful micro-interactions and state transitions.
+	- Empty state system (first-run, filtered, and search contexts).
+	- Keyboard navigation model (row traversal, drawer controls, shortcut discoverability).
+	- Mobile UX adaptation (bottom nav, bottom-sheet detail, touch-friendly rows).
+- Subphase 5E: Quality, trust, and retention
+	- Accessibility hardening (contrast, semantics, focus, touch targets, field-level errors).
+	- Performance upgrades (virtualization, skeletons, cache-first render).
+	- Notification/reminder preferences and trigger rules.
+	- Onboarding improvements and CSV export for user trust/portability.
+
+Reference: Detailed checklist in `docs/09-ui-ux-redesignplan.md`.
 
 ## Phase 6: Stabilization
 - Add unit/integration tests (API first).

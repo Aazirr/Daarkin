@@ -1,19 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { APPLICATION_STATUSES } from "@jat/shared";
 import { useAuth } from "./hooks/useAuth";
 import {
   createApplication,
   deleteApplication,
   fetchApplications,
-  updateApplication,
   setAuthToken as setAppAuthToken,
+  updateApplication,
 } from "./services/applications-api.js";
 import {
   createNote,
-  deleteNote,
   fetchNotes,
-  updateNote,
   setAuthToken as setNotesAuthToken,
+  updateNote,
 } from "./services/notes-api.js";
 
 const STATUS_LABELS = {
@@ -23,13 +22,30 @@ const STATUS_LABELS = {
   rejected: "Rejected",
 };
 
-const DEFAULT_FORM = {
+const STATUS_CLASSES = {
+  applied: "status-applied",
+  interview: "status-interview",
+  offer: "status-offer",
+  rejected: "status-rejected",
+};
+
+const SORT_OPTIONS = [
+  { value: "updatedAt", label: "Updated" },
+  { value: "appliedAt", label: "Applied Date" },
+  { value: "createdAt", label: "Created" },
+  { value: "companyName", label: "Company" },
+  { value: "status", label: "Status" },
+];
+
+const DEFAULT_IMPORT_DRAFT = {
   companyName: "",
   positionTitle: "",
   location: "",
   applicationUrl: "",
   status: "applied",
   appliedAt: "",
+  remotePolicy: "",
+  salaryRange: "",
 };
 
 const dateFormatter = new Intl.DateTimeFormat("en", {
@@ -42,33 +58,120 @@ function formatDate(value) {
   if (!value) {
     return "Not set";
   }
-
   return dateFormatter.format(new Date(value));
 }
 
-function cleanPayload(form) {
+function toTitleWords(value) {
+  return value
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
+function buildCompanyFromHost(hostname) {
+  const segments = hostname.split(".").filter(Boolean);
+  const root = segments[0] || "";
+  return toTitleWords(root.replace(/\d+/g, "")) || "Unknown Company";
+}
+
+function buildRoleFromPath(pathname) {
+  const parts = pathname
+    .split("/")
+    .map((part) => decodeURIComponent(part.trim()))
+    .filter(Boolean)
+    .filter((part) => !["jobs", "job", "careers", "positions", "openings"].includes(part.toLowerCase()));
+
+  if (!parts.length) {
+    return "Unknown Role";
+  }
+
+  return toTitleWords(parts[0]);
+}
+
+function parseImportInput(rawInput) {
+  const input = rawInput.trim();
+
+  if (!input) {
+    throw new Error("Paste a job URL, job text, or company name first.");
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  if (/^https?:\/\//i.test(input)) {
+    const url = new URL(input);
+    return {
+      ...DEFAULT_IMPORT_DRAFT,
+      companyName: buildCompanyFromHost(url.hostname),
+      positionTitle: buildRoleFromPath(url.pathname),
+      location: "",
+      applicationUrl: input,
+      appliedAt: today,
+    };
+  }
+
+  const lines = input
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const firstLine = lines[0] || input;
+  const roleMatch = input.match(/(?:for|as)\s+([A-Za-z0-9\-\s\/]{3,80})/i);
+  const companyMatch = input.match(/(?:at|with)\s+([A-Za-z0-9&\-\s]{2,60})/i);
+
   return {
-    companyName: form.companyName.trim(),
-    positionTitle: form.positionTitle.trim(),
-    location: form.location.trim(),
-    applicationUrl: form.applicationUrl.trim(),
-    status: form.status,
-    appliedAt: form.appliedAt,
+    ...DEFAULT_IMPORT_DRAFT,
+    companyName: companyMatch?.[1]?.trim() || toTitleWords(firstLine.split(" ").slice(0, 3).join(" ")),
+    positionTitle: roleMatch?.[1]?.trim() || "Unknown Role",
+    appliedAt: today,
   };
+}
+
+function normalizePayload(value) {
+  return {
+    companyName: value.companyName.trim(),
+    positionTitle: value.positionTitle.trim(),
+    location: value.location?.trim() || "",
+    applicationUrl: value.applicationUrl?.trim() || "",
+    status: value.status,
+    appliedAt: value.appliedAt || "",
+  };
+}
+
+function daysBetween(start, end) {
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  const diff = endDate.getTime() - startDate.getTime();
+  return Math.max(0, Math.round(diff / (1000 * 60 * 60 * 24)));
+}
+
+function getQueryAppId() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  return new URLSearchParams(window.location.search).get("app");
+}
+
+function setQueryAppId(applicationId) {
+  const url = new URL(window.location.href);
+  if (applicationId) {
+    url.searchParams.set("app", applicationId);
+  } else {
+    url.searchParams.delete("app");
+  }
+  window.history.replaceState({}, "", url);
 }
 
 export default function Dashboard() {
   const { user, token, logout } = useAuth();
-  
+
   const [applications, setApplications] = useState([]);
-  const [form, setForm] = useState(DEFAULT_FORM);
-  const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  // Phase 4: Search, filter, sort, pagination
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState("updatedAt");
@@ -77,15 +180,25 @@ export default function Dashboard() {
   const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  
-  // Notes state
-  const [expandedNotesId, setExpandedNotesId] = useState(null);
-  const [notes, setNotes] = useState({});
-  const [loadingNotes, setLoadingNotes] = useState(false);
-  const [newNoteText, setNewNoteText] = useState("");
-  const [savingNote, setSavingNote] = useState(false);
 
-  // Set auth token in API services when token changes
+  const [importInput, setImportInput] = useState("");
+  const [importLoading, setImportLoading] = useState(false);
+  const [importDraft, setImportDraft] = useState(null);
+  const [importError, setImportError] = useState("");
+
+  const [selectedApplicationId, setSelectedApplicationId] = useState(null);
+  const [statusPopoverAppId, setStatusPopoverAppId] = useState(null);
+  const [contextMenu, setContextMenu] = useState(null);
+  const [animatedBadgeId, setAnimatedBadgeId] = useState(null);
+
+  const [notesByApp, setNotesByApp] = useState({});
+  const [detailNoteText, setDetailNoteText] = useState("");
+  const [detailNoteId, setDetailNoteId] = useState(null);
+  const [noteStatus, setNoteStatus] = useState("idle");
+
+  const noteBaselineRef = useRef("");
+  const noteTimerRef = useRef(null);
+
   useEffect(() => {
     if (token) {
       setAppAuthToken(token);
@@ -93,10 +206,14 @@ export default function Dashboard() {
     }
   }, [token]);
 
+  const selectedApplication = useMemo(
+    () => applications.find((application) => application.id === selectedApplicationId) || null,
+    [applications, selectedApplicationId]
+  );
+
   async function loadApplications() {
     setLoading(true);
     setError("");
-    console.info("[web:dashboard] load-applications-start");
 
     try {
       const result = await fetchApplications({
@@ -108,18 +225,17 @@ export default function Dashboard() {
         pageSize,
       });
 
-      setApplications(result.data?.applications || []);
+      const nextApps = result.data?.applications || [];
+      setApplications(nextApps);
       setTotal(result.meta?.pagination?.total || 0);
       setTotalPages(result.meta?.pagination?.totalPages || 1);
 
-      console.info("[web:dashboard] load-applications-success", {
-        count: result.data?.applications?.length || 0,
-        total: result.meta?.pagination?.total || 0,
-        page: result.meta?.pagination?.page || page,
-      });
+      const requestedId = getQueryAppId();
+      if (requestedId && nextApps.some((application) => application.id === requestedId)) {
+        setSelectedApplicationId(requestedId);
+      }
     } catch (loadError) {
-      console.error("[web:dashboard] load-applications-failed", loadError);
-      setError(loadError.message);
+      setError(loadError.message || "Failed to load applications.");
     } finally {
       setLoading(false);
     }
@@ -133,612 +249,754 @@ export default function Dashboard() {
     setPage(1);
   }, [searchText, statusFilter, sortBy, sortOrder, pageSize]);
 
-  const summary = useMemo(() => {
-    return APPLICATION_STATUSES.reduce(
-      (accumulator, status) => {
-        accumulator[status] = applications.filter((application) => application.status === status).length;
-        return accumulator;
-      },
+  useEffect(() => {
+    function closeFloatingMenus(event) {
+      const target = event.target;
+      if (target instanceof Element && target.closest("[data-floating-menu]")) {
+        return;
+      }
+      setContextMenu(null);
+      setStatusPopoverAppId(null);
+    }
+
+    window.addEventListener("click", closeFloatingMenus);
+    return () => window.removeEventListener("click", closeFloatingMenus);
+  }, []);
+
+  useEffect(() => {
+    if (!selectedApplicationId) {
+      setDetailNoteText("");
+      setDetailNoteId(null);
+      noteBaselineRef.current = "";
+      return;
+    }
+
+    async function loadDetailNotes() {
+      try {
+        const data = await fetchNotes(selectedApplicationId);
+        const loadedNotes = data.notes || [];
+        setNotesByApp((prev) => ({ ...prev, [selectedApplicationId]: loadedNotes }));
+
+        const latest = loadedNotes[0] || null;
+        setDetailNoteText(latest?.noteText || "");
+        setDetailNoteId(latest?.id || null);
+        noteBaselineRef.current = latest?.noteText || "";
+      } catch (noteError) {
+        setError(noteError.message || "Failed to load notes.");
+      }
+    }
+
+    loadDetailNotes();
+  }, [selectedApplicationId]);
+
+  useEffect(() => {
+    if (!selectedApplicationId) {
+      return;
+    }
+
+    if (detailNoteText === noteBaselineRef.current) {
+      return;
+    }
+
+    if (noteTimerRef.current) {
+      clearTimeout(noteTimerRef.current);
+    }
+
+    setNoteStatus("saving");
+
+    noteTimerRef.current = setTimeout(async () => {
+      try {
+        if (detailNoteId) {
+          const data = await updateNote(detailNoteId, { noteText: detailNoteText });
+          const savedNote = data.note;
+
+          setNotesByApp((prev) => {
+            const nextList = (prev[selectedApplicationId] || []).map((note) =>
+              note.id === detailNoteId ? savedNote : note
+            );
+            return { ...prev, [selectedApplicationId]: nextList };
+          });
+
+          noteBaselineRef.current = savedNote.noteText;
+        } else if (detailNoteText.trim()) {
+          const data = await createNote(selectedApplicationId, { noteText: detailNoteText });
+          const savedNote = data.note;
+
+          setDetailNoteId(savedNote.id);
+          setNotesByApp((prev) => {
+            const nextList = [savedNote, ...(prev[selectedApplicationId] || [])];
+            return { ...prev, [selectedApplicationId]: nextList };
+          });
+
+          noteBaselineRef.current = savedNote.noteText;
+        }
+
+        setNoteStatus("saved");
+        setTimeout(() => setNoteStatus("idle"), 1000);
+      } catch (noteError) {
+        setNoteStatus("error");
+        setError(noteError.message || "Failed to save note.");
+      }
+    }, 500);
+
+    return () => {
+      if (noteTimerRef.current) {
+        clearTimeout(noteTimerRef.current);
+      }
+    };
+  }, [detailNoteText, detailNoteId, selectedApplicationId]);
+
+  const metrics = useMemo(() => {
+    const counts = APPLICATION_STATUSES.reduce(
+      (acc, status) => ({ ...acc, [status]: 0 }),
       { applied: 0, interview: 0, offer: 0, rejected: 0 }
     );
+
+    let responseDaysTotal = 0;
+    let responseDaysCount = 0;
+
+    const now = Date.now();
+    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+    let currentWeek = 0;
+    let previousWeek = 0;
+
+    applications.forEach((application) => {
+      counts[application.status] += 1;
+
+      if (application.appliedAt && application.statusChangedAt && ["interview", "offer", "rejected"].includes(application.status)) {
+        responseDaysTotal += daysBetween(application.appliedAt, application.statusChangedAt);
+        responseDaysCount += 1;
+      }
+
+      const createdAt = new Date(application.createdAt).getTime();
+      if (now - createdAt <= sevenDaysMs) {
+        currentWeek += 1;
+      } else if (now - createdAt <= sevenDaysMs * 2) {
+        previousWeek += 1;
+      }
+    });
+
+    const visibleTotal = applications.length;
+    const responseRate = visibleTotal ? Math.round(((counts.interview + counts.offer) / visibleTotal) * 100) : 0;
+    const avgDaysToFirstResponse = responseDaysCount ? Math.round(responseDaysTotal / responseDaysCount) : null;
+    const activeApplications = visibleTotal - counts.rejected;
+
+    let trend = "flat";
+    if (currentWeek > previousWeek) {
+      trend = "up";
+    } else if (currentWeek < previousWeek) {
+      trend = "down";
+    }
+
+    return {
+      counts,
+      responseRate,
+      avgDaysToFirstResponse,
+      activeApplications,
+      trend,
+      currentWeek,
+      previousWeek,
+    };
   }, [applications]);
 
-  function resetForm() {
-    setForm(DEFAULT_FORM);
-    setEditingId(null);
+  function toggleSegmentFilter(status) {
+    setStatusFilter((prev) => (prev === status ? "all" : status));
   }
 
-  function startEdit(application) {
-    console.info("[web:dashboard] start-edit", { id: application.id, companyName: application.companyName });
-    setEditingId(application.id);
-    setForm({
-      companyName: application.companyName || "",
-      positionTitle: application.positionTitle || "",
-      location: application.location || "",
-      applicationUrl: application.applicationUrl || "",
-      status: application.status || "applied",
-      appliedAt: application.appliedAt ? application.appliedAt.slice(0, 10) : "",
-    });
-    setMessage(`Editing ${application.companyName}.`);
-  }
-
-  async function handleSubmit(event) {
+  async function handleImportExtract(event) {
     event.preventDefault();
+    setImportError("");
+    setImportLoading(true);
+
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 700));
+      const parsed = parseImportInput(importInput);
+      setImportDraft(parsed);
+    } catch (extractError) {
+      setImportError(extractError.message || "Unable to parse input.");
+    } finally {
+      setImportLoading(false);
+    }
+  }
+
+  async function optimisticCreateApplication(payload) {
+    const tempId = `temp-${Date.now()}`;
+    const nowIso = new Date().toISOString();
+
+    const optimistic = {
+      id: tempId,
+      ...payload,
+      createdAt: nowIso,
+      updatedAt: nowIso,
+      statusChangedAt: nowIso,
+    };
+
+    setApplications((prev) => [optimistic, ...prev]);
+    setTotal((prev) => prev + 1);
+
+    try {
+      const data = await createApplication(payload);
+      const created = data.application;
+
+      setApplications((prev) => prev.map((application) => (application.id === tempId ? created : application)));
+      return created;
+    } catch (createError) {
+      setApplications((prev) => prev.filter((application) => application.id !== tempId));
+      setTotal((prev) => Math.max(0, prev - 1));
+      throw createError;
+    }
+  }
+
+  async function handleImportSave() {
+    if (!importDraft) {
+      return;
+    }
+
+    const payload = normalizePayload(importDraft);
+
+    if (!payload.companyName || !payload.positionTitle) {
+      setImportError("Company name and position title are required.");
+      return;
+    }
+
     setSaving(true);
     setError("");
     setMessage("");
-    console.info("[web:dashboard] submit-start", { editingId: editingId || null });
 
     try {
-      const payload = cleanPayload(form);
-      const request = editingId ? updateApplication(editingId, payload) : createApplication(payload);
-      await request;
-      await loadApplications();
-      setMessage(editingId ? "Application updated." : "Application created.");
-      console.info("[web:dashboard] submit-success", { action: editingId ? "update" : "create" });
-      resetForm();
-    } catch (submitError) {
-      console.error("[web:dashboard] submit-failed", submitError);
-      setError(submitError.message);
+      await optimisticCreateApplication(payload);
+      setMessage("Application added from import.");
+      setImportDraft(null);
+      setImportInput("");
+    } catch (saveError) {
+      setError(saveError.message || "Failed to create application.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function optimisticDeleteApplication(application) {
+    const previous = applications;
+
+    setApplications((prev) => prev.filter((item) => item.id !== application.id));
+    setTotal((prev) => Math.max(0, prev - 1));
+
+    if (selectedApplicationId === application.id) {
+      setSelectedApplicationId(null);
+      setQueryAppId(null);
+    }
+
+    try {
+      await deleteApplication(application.id);
+      setMessage("Application deleted.");
+    } catch (deleteError) {
+      setApplications(previous);
+      setTotal((prev) => prev + 1);
+      throw deleteError;
     }
   }
 
   async function handleDelete(application) {
     const confirmed = window.confirm(`Delete application for ${application.companyName}?`);
-
     if (!confirmed) {
-      console.info("[web:dashboard] delete-cancelled", { id: application.id });
       return;
     }
 
     setSaving(true);
     setError("");
-    setMessage("");
-    console.info("[web:dashboard] delete-start", { id: application.id, companyName: application.companyName });
 
     try {
-      await deleteApplication(application.id);
-      await loadApplications();
-      if (editingId === application.id) {
-        resetForm();
-      }
-      setMessage("Application deleted.");
-      console.info("[web:dashboard] delete-success", { id: application.id });
+      await optimisticDeleteApplication(application);
     } catch (deleteError) {
-      console.error("[web:dashboard] delete-failed", deleteError);
-      setError(deleteError.message);
+      setError(deleteError.message || "Failed to delete application.");
     } finally {
       setSaving(false);
+      setContextMenu(null);
     }
   }
 
-  async function loadNotesForApplication(applicationId) {
-    setLoadingNotes(true);
-    console.info("[web:dashboard] load-notes-start", { applicationId });
+  async function optimisticStatusChange(application, nextStatus) {
+    const previousStatus = application.status;
 
-    try {
-      const data = await fetchNotes(applicationId);
-      setNotes((prev) => ({
-        ...prev,
-        [applicationId]: data.notes || [],
-      }));
-      console.info("[web:dashboard] load-notes-success", { applicationId, count: data.notes?.length || 0 });
-    } catch (loadError) {
-      console.error("[web:dashboard] load-notes-failed", loadError);
-      setError(loadError.message);
-    } finally {
-      setLoadingNotes(false);
-    }
-  }
-
-  async function handleAddNote(applicationId) {
-    if (!newNoteText.trim()) {
-      setError("Please enter a note before saving.");
+    if (previousStatus === nextStatus) {
       return;
     }
 
-    setSavingNote(true);
-    setError("");
-    setMessage("");
-    console.info("[web:dashboard] create-note-start", { applicationId, textLength: newNoteText.length });
+    setApplications((prev) =>
+      prev.map((item) =>
+        item.id === application.id
+          ? {
+              ...item,
+              status: nextStatus,
+              statusChangedAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            }
+          : item
+      )
+    );
+
+    setAnimatedBadgeId(application.id);
+    setTimeout(() => setAnimatedBadgeId(null), 280);
 
     try {
-      await createNote(applicationId, { noteText: newNoteText });
-      setNewNoteText("");
-      await loadNotesForApplication(applicationId);
-      setMessage("Note added successfully.");
-      console.info("[web:dashboard] create-note-success", { applicationId });
-    } catch (createError) {
-      console.error("[web:dashboard] create-note-failed", createError);
-      setError(createError.message);
-    } finally {
-      setSavingNote(false);
+      const data = await updateApplication(application.id, { status: nextStatus });
+      setApplications((prev) =>
+        prev.map((item) => (item.id === application.id ? data.application : item))
+      );
+
+      if (nextStatus === "interview") {
+        setMessage("Status updated to Interview. Want to set a prep reminder next?");
+      } else if (nextStatus === "offer") {
+        setMessage("Status updated to Offer. Add offer details when ready.");
+      } else if (nextStatus === "rejected") {
+        setMessage("Noted - on to the next one.");
+      } else {
+        setMessage("Status updated.");
+      }
+    } catch (statusError) {
+      setApplications((prev) =>
+        prev.map((item) => (item.id === application.id ? { ...item, status: previousStatus } : item))
+      );
+      setError(statusError.message || "Failed to update status.");
     }
   }
 
-  async function handleDeleteNote(applicationId, noteId) {
-    const confirmed = window.confirm("Delete this note?");
-
-    if (!confirmed) {
-      console.info("[web:dashboard] delete-note-cancelled", { noteId });
-      return;
-    }
-
-    setSavingNote(true);
-    setError("");
-    setMessage("");
-    console.info("[web:dashboard] delete-note-start", { noteId, applicationId });
-
-    try {
-      await deleteNote(noteId);
-      await loadNotesForApplication(applicationId);
-      setMessage("Note deleted successfully.");
-      console.info("[web:dashboard] delete-note-success", { noteId });
-    } catch (deleteError) {
-      console.error("[web:dashboard] delete-note-failed", deleteError);
-      setError(deleteError.message);
-    } finally {
-      setSavingNote(false);
-    }
+  function openDetails(applicationId) {
+    setSelectedApplicationId(applicationId);
+    setQueryAppId(applicationId);
   }
 
-  function toggleNotesExpanded(applicationId) {
-    if (expandedNotesId === applicationId) {
-      setExpandedNotesId(null);
-    } else {
-      setExpandedNotesId(applicationId);
-      if (!notes[applicationId]) {
-        loadNotesForApplication(applicationId);
+  function closeDetails() {
+    setSelectedApplicationId(null);
+    setQueryAppId(null);
+  }
+
+  useEffect(() => {
+    function handleKeyDown(event) {
+      if (!selectedApplicationId) {
+        return;
+      }
+
+      const currentIndex = applications.findIndex((application) => application.id === selectedApplicationId);
+      if (currentIndex < 0) {
+        return;
+      }
+
+      if (event.key === "Escape") {
+        closeDetails();
+      }
+
+      if (event.key === "ArrowDown" && applications[currentIndex + 1]) {
+        event.preventDefault();
+        openDetails(applications[currentIndex + 1].id);
+      }
+
+      if (event.key === "ArrowUp" && applications[currentIndex - 1]) {
+        event.preventDefault();
+        openDetails(applications[currentIndex - 1].id);
       }
     }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [applications, selectedApplicationId]);
+
+  function staleDays(application) {
+    if (!application.statusChangedAt) {
+      return null;
+    }
+
+    const days = daysBetween(application.statusChangedAt, new Date().toISOString());
+    return days;
   }
 
-  function handleLogout() {
-    const confirmed = window.confirm("Are you sure you want to log out?");
-    if (confirmed) {
-      logout();
-      console.info("[web:dashboard] logout-success", { email: user?.email });
-    }
-  }
+  const drawerNotes = notesByApp[selectedApplicationId] || [];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-cream via-cream to-slate/5 px-4 py-8 text-charcoal md:px-8">
-      <main className="mx-auto max-w-7xl">
-        {/* Header */}
-        <header className="mb-12 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="h-0.5 w-3 bg-gradient-to-r from-oxblood to-teal rounded-full"></div>
-              <p className="text-xs font-semibold uppercase tracking-[0.4em] text-slate">Opportunity Tracker</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-muted">Welcome, <span className="font-semibold text-slate">{user?.email?.split("@")[0]}</span></span>
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="rounded-lg border border-red-200 bg-gradient-to-br from-red-50 to-red-50/50 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-red-700 transition hover:bg-red-100 shadow-sm-soft"
-              >
-                Logout
-              </button>
-            </div>
+    <div className="app-shell">
+      <main className="app-content">
+        <header className="app-header">
+          <div>
+            <h1 className="app-title">Opportunity Command Center</h1>
+            <p className="app-subtitle">Fast import, instant status updates, and a split-pane workflow.</p>
           </div>
-          <div className="max-w-3xl space-y-3">
-            <h1 className="text-5xl md:text-6xl font-bold tracking-tight bg-gradient-to-r from-slate via-oxblood to-slate bg-clip-text text-transparent">
-              Manage Every Application
-            </h1>
-            <p className="text-lg text-muted leading-relaxed max-w-2xl">
-              Track job opportunities with a sophisticated, professional interface. Never lose track of where you applied, your progress, or next steps.
-            </p>
+          <div className="app-user-actions">
+            <span className="muted-text">{user?.email}</span>
+            <button type="button" className="btn btn-subtle" onClick={logout}>
+              Logout
+            </button>
           </div>
-          <div className="h-px bg-gradient-to-r from-slate/20 via-slate/10 to-transparent mt-6"></div>
         </header>
 
-        <div className="grid gap-10 md:grid-cols-[0.9fr_1.4fr]">
-          {/* Left: Summary Stats and Info */}
-          <div className="space-y-8">
-            {/* Stats Grid */}
-            <div className="space-y-3">
-              <p className="text-xs font-bold uppercase tracking-widest text-slate/60 px-1">Overview</p>
-              <div className="grid grid-cols-2 gap-3">
-                {Object.entries(summary).map(([status, count]) => (
-                  <div key={status} className="rounded-lg bg-gradient-to-br from-white to-slate/5 border border-slate/10 p-5 shadow-sm-soft hover:shadow-md-soft transition-shadow">
-                    <div className="text-xs font-bold uppercase tracking-wider text-slate/70">
-                      {STATUS_LABELS[status]}
-                    </div>
-                    <div className="mt-3 text-4xl font-bold bg-gradient-to-r from-slate to-oxblood bg-clip-text text-transparent">
-                      {count}
-                    </div>
-                  </div>
-                ))}
-              </div>
+        {(message || error || importError) && (
+          <div className="stack-sm">
+            {message && <div className="alert alert-success">{message}</div>}
+            {error && <div className="alert alert-error">{error}</div>}
+            {importError && <div className="alert alert-error">{importError}</div>}
+          </div>
+        )}
+
+        <section className="panel">
+          <div className="panel-header">
+            <h2>Pipeline Health</h2>
+            <div className="trend-text">
+              {metrics.trend === "up" ? "▲" : metrics.trend === "down" ? "▼" : "•"} This week {metrics.currentWeek} vs last week {metrics.previousWeek}
             </div>
-
-            {/* Info Box */}
-            <div className="rounded-lg bg-gradient-to-br from-white to-teal/5 border border-teal/20 p-6 shadow-md-soft">
-              <div className="mb-4 flex items-center gap-2">
-                <div className="h-1 w-5 bg-gradient-to-r from-teal to-slate rounded-full"></div>
-                <h3 className="text-sm font-bold text-slate uppercase tracking-wider">Ready to Use</h3>
-              </div>
-              <ul className="space-y-3 text-sm text-muted">
-                <li className="flex items-start gap-3">
-                  <span className="mt-1 h-2 w-2 rounded-full bg-teal flex-shrink-0" />
-                  <span className="font-medium">Complete CRUD for job applications</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="mt-1 h-2 w-2 rounded-full bg-teal flex-shrink-0" />
-                  <span className="font-medium">Real-time status tracking</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="mt-1 h-2 w-2 rounded-full bg-teal flex-shrink-0" />
-                  <span className="font-medium">PostgreSQL-backed persistence</span>
-                </li>
-              </ul>
-            </div>
-
-            {/* Messages */}
-            {message ? (
-              <div className="rounded-lg border border-teal/30 bg-gradient-to-r from-teal/10 to-slate/5 px-4 py-3 text-sm font-medium text-teal shadow-sm-soft">
-                ✓ {message}
-              </div>
-            ) : null}
-
-            {error ? (
-              <div className="rounded-lg border border-red-200 bg-gradient-to-r from-red-50 to-red-50/30 px-4 py-3 text-sm font-medium text-red-700 shadow-sm-soft">
-                ✗ {error}
-              </div>
-            ) : null}
           </div>
 
-          {/* Right: Form and List */}
-          <div className="space-y-8">
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="rounded-lg border border-slate/15 bg-gradient-to-br from-white to-slate/2 p-8 shadow-md-soft">
-              <div className="mb-7 flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-bold text-slate">
-                    {editingId ? "Edit Application" : "Add New Application"}
-                  </h2>
-                  <p className="text-sm text-muted mt-1">Capture opportunity details and track progress</p>
-                </div>
-                {editingId ? (
-                  <button
-                    type="button"
-                    onClick={resetForm}
-                    className="rounded-lg border border-slate/20 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-muted transition hover:bg-slate/5 hover:text-slate"
-                  >
-                    Cancel
-                  </button>
-                ) : null}
-              </div>
-
-              <div className="space-y-5">
-                <div className="grid gap-5 md:grid-cols-2">
-                  <label className="space-y-2 text-sm">
-                    <span className="font-bold text-slate">Company Name</span>
-                    <input
-                      required
-                      value={form.companyName}
-                      onChange={(event) => setForm({ ...form, companyName: event.target.value })}
-                      className="w-full rounded-lg border border-slate/15 bg-white px-4 py-3 text-sm text-charcoal outline-none transition focus:border-slate focus:ring-2 focus:ring-slate/10 focus:shadow-md-soft placeholder:text-muted/50"
-                      placeholder="Acme Corp"
-                    />
-                  </label>
-
-                  <label className="space-y-2 text-sm">
-                    <span className="font-bold text-slate">Position Title</span>
-                    <input
-                      required
-                      value={form.positionTitle}
-                      onChange={(event) => setForm({ ...form, positionTitle: event.target.value })}
-                      className="w-full rounded-lg border border-slate/15 bg-white px-4 py-3 text-sm text-charcoal outline-none transition focus:border-slate focus:ring-2 focus:ring-slate/10 focus:shadow-md-soft placeholder:text-muted/50"
-                      placeholder="Frontend Developer"
-                    />
-                  </label>
-
-                  <label className="space-y-2 text-sm">
-                    <span className="font-bold text-slate">Location</span>
-                    <input
-                      value={form.location}
-                      onChange={(event) => setForm({ ...form, location: event.target.value })}
-                      className="w-full rounded-lg border border-slate/15 bg-white px-4 py-3 text-sm text-charcoal outline-none transition focus:border-slate focus:ring-2 focus:ring-slate/10 focus:shadow-md-soft placeholder:text-muted/50"
-                      placeholder="Remote"
-                    />
-                  </label>
-
-                  <label className="space-y-2 text-sm">
-                    <span className="font-bold text-slate">Application URL</span>
-                    <input
-                      type="url"
-                      value={form.applicationUrl}
-                      onChange={(event) => setForm({ ...form, applicationUrl: event.target.value })}
-                      className="w-full rounded-lg border border-slate/15 bg-white px-4 py-3 text-sm text-charcoal outline-none transition focus:border-slate focus:ring-2 focus:ring-slate/10 focus:shadow-md-soft placeholder:text-muted/50"
-                      placeholder="https://jobs.example.com/123"
-                    />
-                  </label>
-
-                  <label className="space-y-2 text-sm">
-                    <span className="font-bold text-slate">Status</span>
-                    <select
-                      value={form.status}
-                      onChange={(event) => setForm({ ...form, status: event.target.value })}
-                      className="w-full rounded-lg border border-slate/15 bg-white px-4 py-3 text-sm text-charcoal outline-none transition focus:border-slate focus:ring-2 focus:ring-slate/10 focus:shadow-md-soft"
-                    >
-                      {APPLICATION_STATUSES.map((status) => (
-                        <option key={status} value={status}>
-                          {STATUS_LABELS[status]}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label className="space-y-2 text-sm">
-                    <span className="font-bold text-slate">Applied Date</span>
-                    <input
-                      type="date"
-                      value={form.appliedAt}
-                      onChange={(event) => setForm({ ...form, appliedAt: event.target.value })}
-                      className="w-full rounded-lg border border-slate/15 bg-white px-4 py-3 text-sm text-charcoal outline-none transition focus:border-slate focus:ring-2 focus:ring-slate/10 focus:shadow-md-soft"
-                    />
-                  </label>
-                </div>
-
+          <div className="pipeline-bar" role="img" aria-label="Application status distribution">
+            {APPLICATION_STATUSES.map((status) => {
+              const count = metrics.counts[status];
+              const denominator = applications.length || 1;
+              const width = Math.max(6, (count / denominator) * 100);
+              const active = statusFilter === status;
+              return (
                 <button
-                  type="submit"
-                  disabled={saving}
-                  className="mt-4 w-full rounded-lg bg-gradient-to-r from-slate to-slate px-4 py-3.5 text-sm font-bold text-white transition hover:shadow-lg-soft shadow-md-soft disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {saving ? "Saving..." : editingId ? "Update Application" : "Add Application"}
-                </button>
-              </div>
-            </form>
-
-            {/* Applications List */}
-            <section className="rounded-lg border border-slate/15 bg-gradient-to-br from-white to-slate/2 p-8 shadow-md-soft">
-              <div className="mb-7 flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-bold text-slate">Your Applications</h2>
-                  <p className="text-sm text-muted mt-1">Search, filter, and sort your pipeline</p>
-                </div>
-                <button
+                  key={status}
                   type="button"
-                  onClick={loadApplications}
-                  className="rounded-lg border border-slate/20 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-muted transition hover:bg-slate/5 hover:text-slate"
+                  className={`pipeline-segment ${STATUS_CLASSES[status]} ${active ? "segment-active" : ""}`}
+                  style={{ width: `${width}%` }}
+                  onClick={() => toggleSegmentFilter(status)}
+                  title={`${STATUS_LABELS[status]} (${count})`}
                 >
-                  Refresh
+                  <span>{STATUS_LABELS[status]} {count}</span>
                 </button>
-              </div>
+              );
+            })}
+          </div>
 
-              <div className="mb-5 grid gap-3 md:grid-cols-2">
-                <label className="space-y-2 text-sm md:col-span-2">
-                  <span className="font-bold text-slate">Search</span>
+          <div className="metric-grid">
+            <div>
+              <p className="metric-label">Response Rate</p>
+              <p className="metric-value">{metrics.responseRate}%</p>
+            </div>
+            <div>
+              <p className="metric-label">Avg Days To First Response</p>
+              <p className="metric-value">{metrics.avgDaysToFirstResponse ?? "-"}</p>
+            </div>
+            <div>
+              <p className="metric-label">Active Applications</p>
+              <p className="metric-value">{metrics.activeApplications}</p>
+            </div>
+          </div>
+        </section>
+
+        <section className="panel">
+          <div className="panel-header">
+            <h2>Quick Import</h2>
+            <span className="muted-text">From 09.md 5A: always visible import bar</span>
+          </div>
+
+          <form onSubmit={handleImportExtract} className="import-form">
+            <input
+              value={importInput}
+              onChange={(event) => setImportInput(event.target.value)}
+              placeholder="Paste job URL, job text, or company name"
+              className={`input ${importLoading ? "input-loading" : ""}`}
+            />
+            <button type="submit" className="btn btn-primary" disabled={importLoading}>
+              {importLoading ? "Extracting..." : "Extract"}
+            </button>
+          </form>
+
+          {importDraft && (
+            <div className="import-draft">
+              <div className="grid-two">
+                <label>
+                  Company
                   <input
-                    value={searchText}
-                    onChange={(event) => setSearchText(event.target.value)}
-                    className="w-full rounded-lg border border-slate/15 bg-white px-4 py-2.5 text-sm text-charcoal outline-none transition focus:border-slate focus:ring-2 focus:ring-slate/10"
-                    placeholder="Company, role, location, or notes"
+                    className="input"
+                    value={importDraft.companyName}
+                    onChange={(event) => setImportDraft({ ...importDraft, companyName: event.target.value })}
                   />
                 </label>
-
-                <label className="space-y-2 text-sm">
-                  <span className="font-bold text-slate">Status</span>
+                <label>
+                  Role
+                  <input
+                    className="input"
+                    value={importDraft.positionTitle}
+                    onChange={(event) => setImportDraft({ ...importDraft, positionTitle: event.target.value })}
+                  />
+                </label>
+                <label>
+                  Status
                   <select
-                    value={statusFilter}
-                    onChange={(event) => setStatusFilter(event.target.value)}
-                    className="w-full rounded-lg border border-slate/15 bg-white px-4 py-2.5 text-sm text-charcoal outline-none transition focus:border-slate focus:ring-2 focus:ring-slate/10"
+                    className="input"
+                    value={importDraft.status}
+                    onChange={(event) => setImportDraft({ ...importDraft, status: event.target.value })}
                   >
-                    <option value="all">All statuses</option>
                     {APPLICATION_STATUSES.map((status) => (
-                      <option key={status} value={status}>
-                        {STATUS_LABELS[status]}
-                      </option>
+                      <option key={status} value={status}>{STATUS_LABELS[status]}</option>
                     ))}
                   </select>
                 </label>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <label className="space-y-2 text-sm">
-                    <span className="font-bold text-slate">Sort by</span>
-                    <select
-                      value={sortBy}
-                      onChange={(event) => setSortBy(event.target.value)}
-                      className="w-full rounded-lg border border-slate/15 bg-white px-4 py-2.5 text-sm text-charcoal outline-none transition focus:border-slate focus:ring-2 focus:ring-slate/10"
-                    >
-                      <option value="updatedAt">Updated</option>
-                      <option value="appliedAt">Applied Date</option>
-                      <option value="createdAt">Created</option>
-                      <option value="companyName">Company</option>
-                      <option value="status">Status</option>
-                    </select>
-                  </label>
-
-                  <label className="space-y-2 text-sm">
-                    <span className="font-bold text-slate">Order</span>
-                    <select
-                      value={sortOrder}
-                      onChange={(event) => setSortOrder(event.target.value)}
-                      className="w-full rounded-lg border border-slate/15 bg-white px-4 py-2.5 text-sm text-charcoal outline-none transition focus:border-slate focus:ring-2 focus:ring-slate/10"
-                    >
-                      <option value="desc">Descending</option>
-                      <option value="asc">Ascending</option>
-                    </select>
-                  </label>
-                </div>
+                <label>
+                  Applied Date
+                  <input
+                    type="date"
+                    className="input"
+                    value={importDraft.appliedAt}
+                    onChange={(event) => setImportDraft({ ...importDraft, appliedAt: event.target.value })}
+                  />
+                </label>
+                <label>
+                  Location
+                  <input
+                    className="input"
+                    value={importDraft.location}
+                    onChange={(event) => setImportDraft({ ...importDraft, location: event.target.value })}
+                  />
+                </label>
+                <label>
+                  URL
+                  <input
+                    className="input"
+                    value={importDraft.applicationUrl}
+                    onChange={(event) => setImportDraft({ ...importDraft, applicationUrl: event.target.value })}
+                  />
+                </label>
               </div>
 
-              <div className="space-y-4">
-                {loading ? (
-                  <div className="rounded-lg border border-dashed border-slate/15 bg-gradient-to-br from-slate/2 to-slate/5 p-12 text-center text-sm text-muted">
-                    Loading applications...
-                  </div>
-                ) : applications.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-slate/15 bg-gradient-to-br from-slate/2 to-slate/5 p-12 text-center text-sm text-muted">
-                    No applications found for the current search/filter.
-                  </div>
-                ) : (
-                  applications.map((application) => (
-                    <div key={application.id}>
-                      <article className="rounded-lg border border-slate/10 bg-gradient-to-br from-white to-white/50 p-5 transition hover:shadow-md-soft hover:border-slate/20">
-                        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                          <div className="flex-1">
-                            <div className="flex flex-wrap items-center gap-3">
-                              <h3 className="font-bold text-lg text-slate">{application.companyName}</h3>
-                              <span className="inline-block rounded-full border border-teal/30 bg-gradient-to-r from-teal/10 to-slate/5 px-3 py-1 text-xs font-bold uppercase tracking-wider text-teal">
-                                {STATUS_LABELS[application.status]}
-                              </span>
-                            </div>
-                            <p className="mt-2 text-base font-semibold text-charcoal">{application.positionTitle}</p>
-                            <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted font-medium">
-                              <span>📍 {application.location || "Location not specified"}</span>
-                              <span>📅 Applied {formatDate(application.appliedAt)}</span>
-                              <span>🏷 Status updated {formatDate(application.statusChangedAt)}</span>
-                              <span>🔄 Updated {formatDate(application.updatedAt)}</span>
-                            </div>
-                            {application.applicationUrl ? (
-                              <a
-                                href={application.applicationUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="mt-3 inline-flex gap-1 text-sm font-bold text-teal underline-offset-2 hover:underline"
-                              >
-                                Open Job Post →
-                              </a>
-                            ) : null}
-                          </div>
+              <div className="row-actions">
+                <button type="button" className="btn btn-subtle" onClick={() => setImportDraft(null)}>
+                  Cancel
+                </button>
+                <button type="button" className="btn btn-primary" onClick={handleImportSave} disabled={saving}>
+                  {saving ? "Saving..." : "Save Application"}
+                </button>
+              </div>
+            </div>
+          )}
+        </section>
 
-                          <div className="flex gap-2 md:flex-col md:shrink-0">
+        <div className="main-grid">
+          <section className="panel">
+            <div className="panel-header">
+              <h2>Applications</h2>
+              <button type="button" className="btn btn-subtle" onClick={loadApplications}>Refresh</button>
+            </div>
+
+            <div className="filter-grid">
+              <input
+                className="input"
+                value={searchText}
+                onChange={(event) => setSearchText(event.target.value)}
+                placeholder="Search company, role, location, notes"
+              />
+              <select className="input" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                <option value="all">All statuses</option>
+                {APPLICATION_STATUSES.map((status) => (
+                  <option key={status} value={status}>{STATUS_LABELS[status]}</option>
+                ))}
+              </select>
+              <select className="input" value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
+                {SORT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+              <select className="input" value={sortOrder} onChange={(event) => setSortOrder(event.target.value)}>
+                <option value="desc">Descending</option>
+                <option value="asc">Ascending</option>
+              </select>
+            </div>
+
+            {loading ? (
+              <div className="empty-state">Loading applications...</div>
+            ) : applications.length === 0 ? (
+              <div className="empty-state">No applications match this filter yet.</div>
+            ) : (
+              <div className="application-list">
+                {applications.map((application) => {
+                  const stale = staleDays(application);
+                  const isStale = stale !== null && stale > 14;
+                  const selected = selectedApplicationId === application.id;
+
+                  return (
+                    <article
+                      key={application.id}
+                      className={`application-row ${selected ? "row-selected" : ""} ${isStale ? "row-stale" : ""}`}
+                      onClick={() => openDetails(application.id)}
+                      onContextMenu={(event) => {
+                        event.preventDefault();
+                        setContextMenu({ x: event.clientX, y: event.clientY, appId: application.id });
+                      }}
+                    >
+                      <div>
+                        <p className="company-title">{application.companyName}</p>
+                        <p className="muted-text">{application.positionTitle}</p>
+                        <div className="meta-line">
+                          <span>{application.location || "Unknown location"}</span>
+                          <span>Applied {formatDate(application.appliedAt)}</span>
+                          <span>Updated {formatDate(application.updatedAt)}</span>
+                        </div>
+                      </div>
+
+                      <div className="status-block" data-floating-menu>
+                        <button
+                          type="button"
+                          className={`status-pill ${STATUS_CLASSES[application.status]} ${animatedBadgeId === application.id ? "status-pop" : ""}`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setStatusPopoverAppId((prev) => (prev === application.id ? null : application.id));
+                          }}
+                        >
+                          {STATUS_LABELS[application.status]}
+                        </button>
+
+                        {statusPopoverAppId === application.id && (
+                          <div className="status-menu" data-floating-menu>
+                            {APPLICATION_STATUSES.map((status) => (
+                              <button
+                                type="button"
+                                key={status}
+                                className="status-menu-item"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setStatusPopoverAppId(null);
+                                  optimisticStatusChange(application, status);
+                                }}
+                              >
+                                {STATUS_LABELS[status]}
+                              </button>
+                            ))}
+                            <hr />
                             <button
                               type="button"
-                              onClick={() => toggleNotesExpanded(application.id)}
-                              className="rounded-lg border border-teal/20 bg-gradient-to-br from-teal/10 to-teal/5 px-4 py-2 text-xs font-bold uppercase tracking-wider text-teal transition hover:bg-teal hover:text-white hover:border-teal/80 shadow-sm-soft"
-                            >
-                              📝 Notes
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => startEdit(application)}
-                              className="rounded-lg border border-slate/20 bg-gradient-to-br from-slate/10 to-slate/5 px-4 py-2 text-xs font-bold uppercase tracking-wider text-slate transition hover:bg-slate hover:text-white hover:border-slate/80 shadow-sm-soft"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDelete(application)}
-                              className="rounded-lg border border-red-200 bg-gradient-to-br from-red-50 to-red-50/50 px-4 py-2 text-xs font-bold uppercase tracking-wider text-red-700 transition hover:bg-red-100 shadow-sm-soft"
+                              className="status-menu-item danger"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setStatusPopoverAppId(null);
+                                handleDelete(application);
+                              }}
                             >
                               Delete
                             </button>
                           </div>
-                        </div>
-                      </article>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
 
-                      {/* Notes Panel - Show when expanded */}
-                      {expandedNotesId === application.id && (
-                        <div className="mt-3 rounded-lg border border-teal/20 bg-gradient-to-br from-teal/5 to-teal/2 p-5">
-                          <h4 className="mb-4 text-sm font-bold text-slate">Notes for {application.companyName}</h4>
+            <div className="pagination-row">
+              <span className="muted-text">Showing {applications.length} of {total}</span>
+              <div className="row-actions">
+                <select className="input input-small" value={pageSize} onChange={(event) => setPageSize(Number(event.target.value))}>
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+                <button type="button" className="btn btn-subtle" disabled={page <= 1} onClick={() => setPage((prev) => prev - 1)}>Prev</button>
+                <span className="muted-text">Page {page} / {totalPages}</span>
+                <button type="button" className="btn btn-subtle" disabled={page >= totalPages} onClick={() => setPage((prev) => prev + 1)}>Next</button>
+              </div>
+            </div>
+          </section>
 
-                          {/* Notes List */}
-                          {loadingNotes ? (
-                            <div className="text-sm text-muted mb-4">Loading notes...</div>
-                          ) : (notes[application.id] || []).length === 0 ? (
-                            <div className="text-sm text-muted mb-4 italic">No notes yet. Create one below.</div>
-                          ) : (
-                            <div className="space-y-3 mb-4">
-                              {(notes[application.id] || []).map((note) => (
-                                <div key={note.id} className="rounded-lg border border-teal/10 bg-white p-3 text-sm">
-                                  <div className="flex items-start justify-between gap-3">
-                                    <p className="text-charcoal flex-1">{note.noteText}</p>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDeleteNote(application.id, note.id)}
-                                      disabled={savingNote}
-                                      className="text-xs font-bold text-red-600 hover:text-red-800 transition flex-shrink-0"
-                                    >
-                                      ✕
-                                    </button>
-                                  </div>
-                                  <div className="mt-2 text-xs text-muted">
-                                    {formatDate(note.createdAt)}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
+          <aside className={`panel detail-drawer ${selectedApplication ? "drawer-open" : ""}`}>
+            {!selectedApplication ? (
+              <div className="empty-state">Select an application to open split-pane details.</div>
+            ) : (
+              <>
+                <div className="panel-header">
+                  <h2>{selectedApplication.companyName}</h2>
+                  <button type="button" className="btn btn-subtle" onClick={closeDetails}>Close</button>
+                </div>
 
-                          {/* Add Note Form */}
-                          <div className="flex gap-2">
-                            <input
-                              type="text"
-                              value={newNoteText}
-                              onChange={(event) => setNewNoteText(event.target.value)}
-                              placeholder="Add a note..."
-                              disabled={savingNote}
-                              className="flex-1 rounded-lg border border-teal/20 bg-white px-3 py-2 text-sm text-charcoal outline-none transition focus:border-teal focus:ring-2 focus:ring-teal/10 disabled:opacity-60 placeholder:text-muted/50"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => handleAddNote(application.id)}
-                              disabled={savingNote || !newNoteText.trim()}
-                              className="rounded-lg bg-gradient-to-r from-teal to-teal px-4 py-2 text-xs font-bold text-white transition hover:shadow-md-soft disabled:cursor-not-allowed disabled:opacity-60 shadow-sm-soft"
-                            >
-                              {savingNote ? "..." : "Add"}
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))
+                <p className="company-title">{selectedApplication.positionTitle}</p>
+                <div className="meta-pills">
+                  <span className="meta-pill">{selectedApplication.location || "Location TBD"}</span>
+                  <span className="meta-pill">{selectedApplication.applicationUrl ? "External link" : "No source URL"}</span>
+                  <span className="meta-pill">Applied {formatDate(selectedApplication.appliedAt)}</span>
+                </div>
+
+                <section className="stack-sm">
+                  <h3>Timeline</h3>
+                  <ul className="timeline">
+                    <li>Created - {formatDate(selectedApplication.createdAt)}</li>
+                    <li>Status changed - {formatDate(selectedApplication.statusChangedAt)}</li>
+                    <li>Last updated - {formatDate(selectedApplication.updatedAt)}</li>
+                    {drawerNotes.slice(0, 3).map((note) => (
+                      <li key={note.id}>Note added - {formatDate(note.createdAt)}</li>
+                    ))}
+                  </ul>
+                </section>
+
+                <section className="stack-sm">
+                  <h3>Notes (autosave)</h3>
+                  <textarea
+                    className="input"
+                    rows={6}
+                    value={detailNoteText}
+                    onChange={(event) => setDetailNoteText(event.target.value)}
+                    placeholder="Add interview prep, recruiter updates, and follow-up notes"
+                  />
+                  <p className="muted-text">
+                    {noteStatus === "saving" ? "Saving..." : noteStatus === "saved" ? "Saved" : noteStatus === "error" ? "Failed to save" : ""}
+                  </p>
+                </section>
+
+                {selectedApplication.status === "offer" && (
+                  <section className="stack-sm">
+                    <h3>Offer Details</h3>
+                    <p className="muted-text">Base, bonus, equity, and vesting details will be tracked here in Phase 7.</p>
+                  </section>
                 )}
-              </div>
 
-              <div className="mt-6 flex flex-col gap-3 border-t border-slate/10 pt-4 md:flex-row md:items-center md:justify-between">
-                <div className="text-sm text-muted">
-                  Showing {applications.length} of {total} applications
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate/70">
-                    Page Size
-                    <select
-                      value={pageSize}
-                      onChange={(event) => setPageSize(Number(event.target.value))}
-                      className="rounded-lg border border-slate/15 bg-white px-2 py-1.5 text-xs text-charcoal"
-                    >
-                      <option value={5}>5</option>
-                      <option value={10}>10</option>
-                      <option value={20}>20</option>
-                      <option value={50}>50</option>
-                    </select>
-                  </label>
-
-                  <button
-                    type="button"
-                    onClick={() => setPage((current) => Math.max(1, current - 1))}
-                    disabled={page <= 1 || loading}
-                    className="rounded-lg border border-slate/20 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-muted transition hover:bg-slate/5 hover:text-slate disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Prev
-                  </button>
-
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate/70">
-                    Page {page} of {totalPages}
-                  </span>
-
-                  <button
-                    type="button"
-                    onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
-                    disabled={page >= totalPages || loading}
-                    className="rounded-lg border border-slate/20 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-muted transition hover:bg-slate/5 hover:text-slate disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
-            </section>
-          </div>
+                <section className="stack-sm">
+                  <h3>Contacts</h3>
+                  <p className="muted-text">Recruiter, hiring manager, and referral tracking placeholder for upcoming CRM-lite flow.</p>
+                </section>
+              </>
+            )}
+          </aside>
         </div>
       </main>
+
+      {contextMenu && (
+        <div
+          className="status-menu context-menu"
+          data-floating-menu
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+        >
+          {APPLICATION_STATUSES.map((status) => {
+            const application = applications.find((item) => item.id === contextMenu.appId);
+            if (!application) {
+              return null;
+            }
+            return (
+              <button
+                type="button"
+                key={status}
+                className="status-menu-item"
+                onClick={() => {
+                  optimisticStatusChange(application, status);
+                  setContextMenu(null);
+                }}
+              >
+                {STATUS_LABELS[status]}
+              </button>
+            );
+          })}
+          <hr />
+          <button
+            type="button"
+            className="status-menu-item danger"
+            onClick={() => {
+              const application = applications.find((item) => item.id === contextMenu.appId);
+              if (application) {
+                handleDelete(application);
+              }
+              setContextMenu(null);
+            }}
+          >
+            Delete
+          </button>
+        </div>
+      )}
     </div>
   );
 }
