@@ -2,9 +2,6 @@ import { useEffect } from "react";
 import { useAuth } from "./hooks/useAuth";
 import Landing from "./Landing";
 import Dashboard from "./Dashboard";
-import { createLogger } from "@jat/shared";
-
-const logger = createLogger("app");
 
 /**
  * Main App Router Component
@@ -13,13 +10,6 @@ const logger = createLogger("app");
  */
 export default function App() {
   const { isAuthenticated, loading, login } = useAuth();
-
-  useEffect(() => {
-    logger.info("[app] Auth state changed", {
-      isAuthenticated,
-      loading,
-    });
-  }, [isAuthenticated, loading]);
 
   // Show loading state while attempting to restore session from localStorage
   if (loading) {

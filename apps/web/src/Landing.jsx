@@ -1,7 +1,4 @@
 import { useState } from "react";
-import { createLogger } from "../utils/logger.js";
-
-const logger = createLogger("landing-page");
 
 export default function Landing({ onLogin }) {
   const [mode, setMode] = useState("login"); // "login" or "register"
@@ -29,21 +26,17 @@ export default function Landing({ onLogin }) {
       if (password !== confirmPassword) {
         setError("Passwords do not match.");
         setLoading(false);
-        logger.error("register-validation-failed", { reason: "password-mismatch" });
         return;
       }
 
       if (password.length < 8) {
         setError("Password must be at least 8 characters.");
         setLoading(false);
-        logger.error("register-validation-failed", { reason: "password-too-short" });
         return;
       }
     }
 
     try {
-      logger.info(`${mode}-attempt`, { email: payload.email });
-
       const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -55,12 +48,10 @@ export default function Landing({ onLogin }) {
       if (!response.ok || !data.success) {
         const message = data.error?.message || `${mode === "login" ? "Login" : "Registration"} failed.`;
         setError(message);
-        logger.error(`${mode}-failed`, { status: response.status, message });
         setLoading(false);
         return;
       }
 
-      logger.info(`${mode}-success`, { userId: data.data.user.id });
       setSuccess(`${mode === "login" ? "Welcome back" : "Welcome"}! Redirecting...`);
 
       // Call the onLogin prop with the token
@@ -68,7 +59,6 @@ export default function Landing({ onLogin }) {
     } catch (fetchError) {
       const message = fetchError.message || "Network error. Please try again.";
       setError(message);
-      logger.error(`${mode}-error`, { error: fetchError.message });
       setLoading(false);
     }
   }

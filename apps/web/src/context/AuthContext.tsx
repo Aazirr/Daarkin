@@ -1,8 +1,5 @@
 import { createContext, useState, useEffect, ReactNode } from "react";
 import type { User } from "../services/auth-api";
-import { createLogger } from "@jat/shared";
-
-const logger = createLogger("auth-context");
 
 export interface AuthContextValue {
   user: User | null;
@@ -44,15 +41,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     if (storedToken && storedUser) {
       try {
-        logger.info("[auth-context] Hydrating session from localStorage", {
-          userId: JSON.parse(storedUser).id,
-        });
         setToken(storedToken);
         setUser(JSON.parse(storedUser));
       } catch (error) {
-        logger.error("[auth-context] Failed to parse stored session", {
-          error: error instanceof Error ? error.message : String(error),
-        });
         // Clear invalid stored data
         localStorage.removeItem("token");
         localStorage.removeItem("user");
@@ -63,7 +54,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   function login(newToken: string, newUser: User): void {
-    logger.info("[auth-context] User logged in", { userId: newUser.id });
     setToken(newToken);
     setUser(newUser);
     // Persist to localStorage for session recovery on page reload
@@ -72,7 +62,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }
 
   function logout(): void {
-    logger.info("[auth-context] User logged out");
     setToken(null);
     setUser(null);
     // Clear persisted session data
