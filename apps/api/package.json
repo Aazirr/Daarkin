@@ -1,0 +1,11 @@
+{
+  "name": "@jat/api",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "echo \"API not initialized yet. Next step: scaffold Express app.\"",
+    "build": "echo \"API build not configured yet.\"",
+    "lint": "echo \"API lint not configured yet.\"",
+    "test": "echo \"API tests not configured yet.\""
+  }
+}

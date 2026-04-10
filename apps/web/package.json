@@ -1,0 +1,11 @@
+{
+  "name": "@jat/web",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "echo \"Web app not initialized yet. Next step: scaffold Vite React app.\"",
+    "build": "echo \"Web build not configured yet.\"",
+    "lint": "echo \"Web lint not configured yet.\"",
+    "test": "echo \"Web tests not configured yet.\""
+  }
+}

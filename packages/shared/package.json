@@ -1,0 +1,11 @@
+{
+  "name": "@jat/shared",
+  "private": true,
+  "version": "0.1.0",
+  "main": "src/index.js",
+  "scripts": {
+    "build": "echo \"Shared package build not configured yet.\"",
+    "lint": "echo \"Shared lint not configured yet.\"",
+    "test": "echo \"Shared tests not configured yet.\""
+  }
+}
