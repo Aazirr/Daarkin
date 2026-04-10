@@ -37,6 +37,8 @@ const SORT_OPTIONS = [
   { value: "status", label: "Status" },
 ];
 
+const AVATAR_COLORS = ["#E8F0FF", "#FFF3E4", "#E8F8EF", "#F5EEFF", "#FFF0F4", "#EDF7FA"];
+
 const DEFAULT_IMPORT_DRAFT = {
   companyName: "",
   positionTitle: "",
@@ -162,6 +164,66 @@ function setQueryAppId(applicationId) {
   window.history.replaceState({}, "", url);
 }
 
+function highlightText(text, searchQuery) {
+  if (!text) {
+    return "";
+  }
+
+  const query = searchQuery.trim();
+  if (!query) {
+    return text;
+  }
+
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const regex = new RegExp(`(${escaped})`, "ig");
+  const parts = String(text).split(regex);
+
+  return parts.map((part, index) =>
+    regex.test(part) ? (
+      <mark className="hit-mark" key={`${part}-${index}`}>
+        {part}
+      </mark>
+    ) : (
+      <span key={`${part}-${index}`}>{part}</span>
+    )
+  );
+}
+
+function hashToIndex(value, max) {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash) % max;
+}
+
+function getInitials(name) {
+  const parts = (name || "")
+    .split(/\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (!parts.length) {
+    return "NA";
+  }
+
+  return `${parts[0][0] || ""}${parts[1]?.[0] || parts[0][1] || ""}`.toUpperCase();
+}
+
+function getLogoUrl(applicationUrl) {
+  if (!applicationUrl) {
+    return null;
+  }
+
+  try {
+    const { hostname } = new URL(applicationUrl);
+    return `https://logo.clearbit.com/${hostname}`;
+  } catch {
+    return null;
+  }
+}
+
 export default function Dashboard() {
   const { user, token, logout } = useAuth();
 
@@ -187,17 +249,47 @@ export default function Dashboard() {
   const [importError, setImportError] = useState("");
 
   const [selectedApplicationId, setSelectedApplicationId] = useState(null);
+  const [focusedApplicationId, setFocusedApplicationId] = useState(null);
   const [statusPopoverAppId, setStatusPopoverAppId] = useState(null);
   const [contextMenu, setContextMenu] = useState(null);
   const [animatedBadgeId, setAnimatedBadgeId] = useState(null);
+  const [logoFallbackMap, setLogoFallbackMap] = useState({});
 
   const [notesByApp, setNotesByApp] = useState({});
   const [detailNoteText, setDetailNoteText] = useState("");
   const [detailNoteId, setDetailNoteId] = useState(null);
   const [noteStatus, setNoteStatus] = useState("idle");
 
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem("sidebarCollapsed") === "1");
+  const [viewMode, setViewMode] = useState(() => localStorage.getItem("dashboardViewMode") || "list");
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 640);
+  const [pipelineExpandedMobile, setPipelineExpandedMobile] = useState(false);
+  const [searchHintVisible, setSearchHintVisible] = useState(() => localStorage.getItem("searchHintDismissed") !== "1");
+
+  const importInputRef = useRef(null);
+  const importSectionRef = useRef(null);
+  const searchInputRef = useRef(null);
+  const notesTextRef = useRef(null);
   const noteBaselineRef = useRef("");
   const noteTimerRef = useRef(null);
+  const touchStartYRef = useRef(null);
+
+  useEffect(() => {
+    localStorage.setItem("sidebarCollapsed", sidebarCollapsed ? "1" : "0");
+  }, [sidebarCollapsed]);
+
+  useEffect(() => {
+    localStorage.setItem("dashboardViewMode", viewMode);
+  }, [viewMode]);
+
+  useEffect(() => {
+    function handleResize() {
+      setIsMobile(window.innerWidth <= 640);
+    }
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     if (token) {
@@ -210,6 +302,21 @@ export default function Dashboard() {
     () => applications.find((application) => application.id === selectedApplicationId) || null,
     [applications, selectedApplicationId]
   );
+
+  const groupedForKanban = useMemo(() => {
+    const base = {
+      applied: [],
+      interview: [],
+      offer: [],
+      rejected: [],
+    };
+
+    applications.forEach((application) => {
+      base[application.status].push(application);
+    });
+
+    return base;
+  }, [applications]);
 
   async function loadApplications() {
     setLoading(true);
@@ -345,6 +452,68 @@ export default function Dashboard() {
       }
     };
   }, [detailNoteText, detailNoteId, selectedApplicationId]);
+
+  useEffect(() => {
+    function isTypingContext(target) {
+      return target instanceof HTMLElement && ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);
+    }
+
+    function handleKeyDown(event) {
+      if ((event.key === "/" || ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k")) && !isTypingContext(event.target)) {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+        setSearchHintVisible(false);
+        localStorage.setItem("searchHintDismissed", "1");
+        return;
+      }
+
+      const activeRows = applications;
+      if (!activeRows.length || isTypingContext(event.target)) {
+        return;
+      }
+
+      const currentIndex = activeRows.findIndex((item) => item.id === (focusedApplicationId || selectedApplicationId));
+
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        const next = activeRows[Math.min(activeRows.length - 1, Math.max(0, currentIndex + 1))];
+        if (next) {
+          setFocusedApplicationId(next.id);
+        }
+      }
+
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        const next = activeRows[Math.max(0, currentIndex - 1)];
+        if (next) {
+          setFocusedApplicationId(next.id);
+        }
+      }
+
+      if (event.key === "Enter" && focusedApplicationId) {
+        event.preventDefault();
+        openDetails(focusedApplicationId);
+      }
+
+      if (event.key === "Escape") {
+        closeDetails();
+      }
+
+      if (event.key.toLowerCase() === "s" && focusedApplicationId) {
+        event.preventDefault();
+        setStatusPopoverAppId((prev) => (prev === focusedApplicationId ? null : focusedApplicationId));
+      }
+
+      if (event.key.toLowerCase() === "n" && selectedApplicationId) {
+        event.preventDefault();
+        notesTextRef.current?.focus();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [applications, focusedApplicationId, selectedApplicationId]);
 
   const metrics = useMemo(() => {
     const counts = APPLICATION_STATUSES.reduce(
@@ -563,6 +732,7 @@ export default function Dashboard() {
 
   function openDetails(applicationId) {
     setSelectedApplicationId(applicationId);
+    setFocusedApplicationId(applicationId);
     setQueryAppId(applicationId);
   }
 
@@ -571,53 +741,236 @@ export default function Dashboard() {
     setQueryAppId(null);
   }
 
-  useEffect(() => {
-    function handleKeyDown(event) {
-      if (!selectedApplicationId) {
-        return;
-      }
-
-      const currentIndex = applications.findIndex((application) => application.id === selectedApplicationId);
-      if (currentIndex < 0) {
-        return;
-      }
-
-      if (event.key === "Escape") {
-        closeDetails();
-      }
-
-      if (event.key === "ArrowDown" && applications[currentIndex + 1]) {
-        event.preventDefault();
-        openDetails(applications[currentIndex + 1].id);
-      }
-
-      if (event.key === "ArrowUp" && applications[currentIndex - 1]) {
-        event.preventDefault();
-        openDetails(applications[currentIndex - 1].id);
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [applications, selectedApplicationId]);
-
   function staleDays(application) {
     if (!application.statusChangedAt) {
       return null;
     }
 
-    const days = daysBetween(application.statusChangedAt, new Date().toISOString());
-    return days;
+    return daysBetween(application.statusChangedAt, new Date().toISOString());
   }
 
-  const drawerNotes = notesByApp[selectedApplicationId] || [];
+  function activateQuickAddFromSearch() {
+    const q = searchText.trim();
+    if (!q) {
+      return;
+    }
+
+    setImportDraft({
+      ...DEFAULT_IMPORT_DRAFT,
+      companyName: toTitleWords(q),
+      positionTitle: "Unknown Role",
+      appliedAt: new Date().toISOString().slice(0, 10),
+    });
+
+    importSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setTimeout(() => importInputRef.current?.focus(), 250);
+  }
+
+  function renderAvatar(application) {
+    const logoUrl = getLogoUrl(application.applicationUrl);
+    const initials = getInitials(application.companyName);
+    const fallbackKey = logoUrl || `${application.id}-fallback`;
+    const useFallback = !logoUrl || logoFallbackMap[fallbackKey];
+    const bg = AVATAR_COLORS[hashToIndex(application.companyName || application.id, AVATAR_COLORS.length)];
+
+    return (
+      <div className="company-avatar" style={{ backgroundColor: bg }}>
+        {!useFallback ? (
+          <img
+            src={logoUrl}
+            alt={`${application.companyName} logo`}
+            onError={() => setLogoFallbackMap((prev) => ({ ...prev, [fallbackKey]: true }))}
+          />
+        ) : (
+          <span>{initials}</span>
+        )}
+      </div>
+    );
+  }
+
+  function renderApplicationCard(application) {
+    const stale = staleDays(application);
+    const isStale = stale !== null && stale > 14;
+    const selected = selectedApplicationId === application.id;
+    const focused = focusedApplicationId === application.id;
+
+    return (
+      <article
+        key={application.id}
+        className={`application-row row-anim ${selected ? "row-selected" : ""} ${isStale ? "row-stale" : ""} ${focused ? "row-focused" : ""}`}
+        onClick={() => openDetails(application.id)}
+        onFocus={() => setFocusedApplicationId(application.id)}
+        onContextMenu={(event) => {
+          event.preventDefault();
+          setContextMenu({ x: event.clientX, y: event.clientY, appId: application.id });
+        }}
+        tabIndex={0}
+      >
+        <div className="row-main">
+          {renderAvatar(application)}
+          <div>
+            <p className="company-title company-display">{highlightText(application.companyName, searchText)}</p>
+            <p className="role-text">{highlightText(application.positionTitle, searchText)}</p>
+            <div className="meta-line">
+              <span>{highlightText(application.location || "Unknown location", searchText)}</span>
+              <span className="mono-text">Applied {formatDate(application.appliedAt)}</span>
+              <span className="mono-text">Updated {formatDate(application.updatedAt)}</span>
+              {isStale ? <span className="attention-dot">Needs attention</span> : null}
+            </div>
+            <div className="shortcut-hint">Enter: open, S: status, N: notes</div>
+          </div>
+        </div>
+
+        <div className="row-right" data-floating-menu>
+          <div className="row-hover-actions">
+            <button type="button" className="icon-btn" onClick={(event) => { event.stopPropagation(); openDetails(application.id); }} aria-label="Open details">
+              ✎
+            </button>
+            {application.applicationUrl ? (
+              <a
+                href={application.applicationUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="icon-btn"
+                aria-label="Open job URL"
+                onClick={(event) => event.stopPropagation()}
+              >
+                ↗
+              </a>
+            ) : null}
+          </div>
+
+          <button
+            type="button"
+            className={`status-pill ${STATUS_CLASSES[application.status]} ${animatedBadgeId === application.id ? "status-pop" : ""}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              setStatusPopoverAppId((prev) => (prev === application.id ? null : application.id));
+            }}
+          >
+            {STATUS_LABELS[application.status]}
+          </button>
+
+          {statusPopoverAppId === application.id && (
+            <div className="status-menu" data-floating-menu>
+              {APPLICATION_STATUSES.map((status) => (
+                <button
+                  type="button"
+                  key={status}
+                  className="status-menu-item"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setStatusPopoverAppId(null);
+                    optimisticStatusChange(application, status);
+                  }}
+                >
+                  {STATUS_LABELS[status]}
+                </button>
+              ))}
+              <hr />
+              <button
+                type="button"
+                className="status-menu-item danger"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setStatusPopoverAppId(null);
+                  handleDelete(application);
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          )}
+        </div>
+      </article>
+    );
+  }
+
+  function renderDetailContent() {
+    const drawerNotes = notesByApp[selectedApplicationId] || [];
+
+    if (!selectedApplication) {
+      return <div className="empty-state">Select an application to open split-pane details.</div>;
+    }
+
+    return (
+      <>
+        <div className="panel-header">
+          <h2>{selectedApplication.companyName}</h2>
+          <button type="button" className="btn btn-subtle" onClick={closeDetails}>Close</button>
+        </div>
+
+        <p className="company-title company-display">{selectedApplication.positionTitle}</p>
+        <div className="meta-pills">
+          <span className="meta-pill">{selectedApplication.location || "Location TBD"}</span>
+          <span className="meta-pill">{selectedApplication.applicationUrl ? "External link" : "No source URL"}</span>
+          <span className="meta-pill mono-text">Applied {formatDate(selectedApplication.appliedAt)}</span>
+        </div>
+
+        <section className="stack-sm">
+          <h3>Timeline</h3>
+          <ul className="timeline">
+            <li>Created - {formatDate(selectedApplication.createdAt)}</li>
+            <li>Status changed - {formatDate(selectedApplication.statusChangedAt)}</li>
+            <li>Last updated - {formatDate(selectedApplication.updatedAt)}</li>
+            {drawerNotes.slice(0, 3).map((note) => (
+              <li key={note.id}>Note added - {formatDate(note.createdAt)}</li>
+            ))}
+          </ul>
+        </section>
+
+        <section className="stack-sm">
+          <h3>Notes (autosave)</h3>
+          <textarea
+            ref={notesTextRef}
+            className="input"
+            rows={6}
+            value={detailNoteText}
+            onChange={(event) => setDetailNoteText(event.target.value)}
+            placeholder="Add interview prep, recruiter updates, and follow-up notes"
+          />
+          <p className="muted-text">
+            {noteStatus === "saving" ? "Saving..." : noteStatus === "saved" ? "Saved" : noteStatus === "error" ? "Failed to save" : ""}
+          </p>
+        </section>
+
+        {selectedApplication.status === "offer" && (
+          <section className="stack-sm">
+            <h3>Offer Details</h3>
+            <p className="muted-text">Base, bonus, equity, and vesting details will be tracked here in Phase 7.</p>
+          </section>
+        )}
+
+        <section className="stack-sm">
+          <h3>Contacts</h3>
+          <p className="muted-text">Recruiter, hiring manager, and referral tracking placeholder for upcoming CRM-lite flow.</p>
+        </section>
+      </>
+    );
+  }
+
+  const showSearchEmpty = !loading && applications.length === 0 && searchText.trim().length > 0;
+  const showFirstRunEmpty = !loading && total === 0 && !searchText.trim();
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
+      <aside className="sidebar">
+        <button type="button" className="sidebar-toggle" onClick={() => setSidebarCollapsed((prev) => !prev)}>
+          {sidebarCollapsed ? "»" : "«"}
+        </button>
+
+        <nav className="sidebar-nav">
+          <button type="button" className="nav-item active" title="Dashboard">▦ {!sidebarCollapsed && <span>Dashboard</span>}</button>
+          <button type="button" className="nav-item" title="Board" onClick={() => setViewMode("kanban")}>☰ {!sidebarCollapsed && <span>Board</span>}</button>
+          <button type="button" className="nav-item" title="Offers">✦ {!sidebarCollapsed && <span>Offers</span>}</button>
+          <button type="button" className="nav-item" title="Settings">⚙ {!sidebarCollapsed && <span>Settings</span>}</button>
+        </nav>
+      </aside>
+
       <main className="app-content">
         <header className="app-header">
           <div>
-            <h1 className="app-title">Opportunity Command Center</h1>
+            <h1 className="app-title company-display">Opportunity Command Center</h1>
             <p className="app-subtitle">Fast import, instant status updates, and a split-pane workflow.</p>
           </div>
           <div className="app-user-actions">
@@ -636,7 +989,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        <section className="panel">
+        <section className="panel" id="pipeline-health">
           <div className="panel-header">
             <h2>Pipeline Health</h2>
             <div className="trend-text">
@@ -665,23 +1018,31 @@ export default function Dashboard() {
             })}
           </div>
 
-          <div className="metric-grid">
-            <div>
-              <p className="metric-label">Response Rate</p>
-              <p className="metric-value">{metrics.responseRate}%</p>
+          {(!isMobile || pipelineExpandedMobile) && (
+            <div className="metric-grid metrics-animated">
+              <div>
+                <p className="metric-label">Response Rate</p>
+                <p className="metric-value mono-text">{metrics.responseRate}%</p>
+              </div>
+              <div>
+                <p className="metric-label">Avg Days To First Response</p>
+                <p className="metric-value mono-text">{metrics.avgDaysToFirstResponse ?? "-"}</p>
+              </div>
+              <div>
+                <p className="metric-label">Active Applications</p>
+                <p className="metric-value mono-text">{metrics.activeApplications}</p>
+              </div>
             </div>
-            <div>
-              <p className="metric-label">Avg Days To First Response</p>
-              <p className="metric-value">{metrics.avgDaysToFirstResponse ?? "-"}</p>
-            </div>
-            <div>
-              <p className="metric-label">Active Applications</p>
-              <p className="metric-value">{metrics.activeApplications}</p>
-            </div>
-          </div>
+          )}
+
+          {isMobile && (
+            <button type="button" className="btn btn-subtle" onClick={() => setPipelineExpandedMobile((prev) => !prev)}>
+              {pipelineExpandedMobile ? "Collapse pipeline details" : "Expand pipeline details"}
+            </button>
+          )}
         </section>
 
-        <section className="panel">
+        <section ref={importSectionRef} className="panel">
           <div className="panel-header">
             <h2>Quick Import</h2>
             <span className="muted-text">From 09.md 5A: always visible import bar</span>
@@ -689,6 +1050,7 @@ export default function Dashboard() {
 
           <form onSubmit={handleImportExtract} className="import-form">
             <input
+              ref={importInputRef}
               value={importInput}
               onChange={(event) => setImportInput(event.target.value)}
               placeholder="Paste job URL, job text, or company name"
@@ -773,16 +1135,26 @@ export default function Dashboard() {
           <section className="panel">
             <div className="panel-header">
               <h2>Applications</h2>
-              <button type="button" className="btn btn-subtle" onClick={loadApplications}>Refresh</button>
+              <div className="row-actions">
+                <div className="view-toggle" role="tablist" aria-label="View mode">
+                  <button type="button" className={`btn btn-subtle ${viewMode === "list" ? "active-toggle" : ""}`} onClick={() => setViewMode("list")}>List</button>
+                  <button type="button" className={`btn btn-subtle ${viewMode === "kanban" ? "active-toggle" : ""}`} onClick={() => setViewMode("kanban")}>Kanban</button>
+                </div>
+                <button type="button" className="btn btn-subtle" onClick={loadApplications}>Refresh</button>
+              </div>
             </div>
 
             <div className="filter-grid">
-              <input
-                className="input"
-                value={searchText}
-                onChange={(event) => setSearchText(event.target.value)}
-                placeholder="Search company, role, location, notes"
-              />
+              <div className="search-wrap">
+                <input
+                  ref={searchInputRef}
+                  className="input"
+                  value={searchText}
+                  onChange={(event) => setSearchText(event.target.value)}
+                  placeholder="Search company, role, location, notes"
+                />
+                {searchHintVisible && <span className="search-hint">⌘K or / to search</span>}
+              </div>
               <select className="input" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
                 <option value="all">All statuses</option>
                 {APPLICATION_STATUSES.map((status) => (
@@ -802,81 +1174,56 @@ export default function Dashboard() {
 
             {loading ? (
               <div className="empty-state">Loading applications...</div>
-            ) : applications.length === 0 ? (
-              <div className="empty-state">No applications match this filter yet.</div>
-            ) : (
-              <div className="application-list">
-                {applications.map((application) => {
-                  const stale = staleDays(application);
-                  const isStale = stale !== null && stale > 14;
-                  const selected = selectedApplicationId === application.id;
-
-                  return (
-                    <article
-                      key={application.id}
-                      className={`application-row ${selected ? "row-selected" : ""} ${isStale ? "row-stale" : ""}`}
-                      onClick={() => openDetails(application.id)}
-                      onContextMenu={(event) => {
-                        event.preventDefault();
-                        setContextMenu({ x: event.clientX, y: event.clientY, appId: application.id });
+            ) : showFirstRunEmpty ? (
+              <div className="empty-state first-run-empty">
+                <h3>Paste your first job URL to get started</h3>
+                <p>Try one of these examples:</p>
+                <div className="row-actions">
+                  {[
+                    "https://jobs.lever.co/stripe/frontend-engineer",
+                    "https://www.notion.so/careers/product-designer",
+                    "https://jobs.ashbyhq.com/vercel/software-engineer",
+                  ].map((example) => (
+                    <button
+                      key={example}
+                      type="button"
+                      className="btn btn-subtle"
+                      onClick={() => {
+                        setImportInput(example);
+                        importSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                        setTimeout(() => importInputRef.current?.focus(), 250);
                       }}
                     >
-                      <div>
-                        <p className="company-title">{application.companyName}</p>
-                        <p className="muted-text">{application.positionTitle}</p>
-                        <div className="meta-line">
-                          <span>{application.location || "Unknown location"}</span>
-                          <span>Applied {formatDate(application.appliedAt)}</span>
-                          <span>Updated {formatDate(application.updatedAt)}</span>
-                        </div>
-                      </div>
-
-                      <div className="status-block" data-floating-menu>
-                        <button
-                          type="button"
-                          className={`status-pill ${STATUS_CLASSES[application.status]} ${animatedBadgeId === application.id ? "status-pop" : ""}`}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setStatusPopoverAppId((prev) => (prev === application.id ? null : application.id));
-                          }}
-                        >
-                          {STATUS_LABELS[application.status]}
-                        </button>
-
-                        {statusPopoverAppId === application.id && (
-                          <div className="status-menu" data-floating-menu>
-                            {APPLICATION_STATUSES.map((status) => (
-                              <button
-                                type="button"
-                                key={status}
-                                className="status-menu-item"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  setStatusPopoverAppId(null);
-                                  optimisticStatusChange(application, status);
-                                }}
-                              >
-                                {STATUS_LABELS[status]}
-                              </button>
-                            ))}
-                            <hr />
-                            <button
-                              type="button"
-                              className="status-menu-item danger"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                setStatusPopoverAppId(null);
-                                handleDelete(application);
-                              }}
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </article>
-                  );
-                })}
+                      Example URL
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : showSearchEmpty ? (
+              <div className="empty-state">
+                <p>No applications matching "{searchText}".</p>
+                <button type="button" className="btn btn-primary" onClick={activateQuickAddFromSearch}>
+                  Quick add "{searchText}"
+                </button>
+              </div>
+            ) : viewMode === "list" ? (
+              <div className="application-list list-transition">
+                {applications.map(renderApplicationCard)}
+              </div>
+            ) : (
+              <div className="kanban-grid">
+                {APPLICATION_STATUSES.map((status) => (
+                  <section key={status} className="kanban-column">
+                    <h3>{STATUS_LABELS[status]}</h3>
+                    <div className="kanban-stack">
+                      {groupedForKanban[status].length === 0 ? (
+                        <div className="kanban-empty">No items</div>
+                      ) : (
+                        groupedForKanban[status].map(renderApplicationCard)
+                      )}
+                    </div>
+                  </section>
+                ))}
               </div>
             )}
 
@@ -890,71 +1237,60 @@ export default function Dashboard() {
                   <option value={50}>50</option>
                 </select>
                 <button type="button" className="btn btn-subtle" disabled={page <= 1} onClick={() => setPage((prev) => prev - 1)}>Prev</button>
-                <span className="muted-text">Page {page} / {totalPages}</span>
+                <span className="muted-text mono-text">Page {page} / {totalPages}</span>
                 <button type="button" className="btn btn-subtle" disabled={page >= totalPages} onClick={() => setPage((prev) => prev + 1)}>Next</button>
               </div>
             </div>
           </section>
 
-          <aside className={`panel detail-drawer ${selectedApplication ? "drawer-open" : ""}`}>
-            {!selectedApplication ? (
-              <div className="empty-state">Select an application to open split-pane details.</div>
-            ) : (
-              <>
-                <div className="panel-header">
-                  <h2>{selectedApplication.companyName}</h2>
-                  <button type="button" className="btn btn-subtle" onClick={closeDetails}>Close</button>
-                </div>
-
-                <p className="company-title">{selectedApplication.positionTitle}</p>
-                <div className="meta-pills">
-                  <span className="meta-pill">{selectedApplication.location || "Location TBD"}</span>
-                  <span className="meta-pill">{selectedApplication.applicationUrl ? "External link" : "No source URL"}</span>
-                  <span className="meta-pill">Applied {formatDate(selectedApplication.appliedAt)}</span>
-                </div>
-
-                <section className="stack-sm">
-                  <h3>Timeline</h3>
-                  <ul className="timeline">
-                    <li>Created - {formatDate(selectedApplication.createdAt)}</li>
-                    <li>Status changed - {formatDate(selectedApplication.statusChangedAt)}</li>
-                    <li>Last updated - {formatDate(selectedApplication.updatedAt)}</li>
-                    {drawerNotes.slice(0, 3).map((note) => (
-                      <li key={note.id}>Note added - {formatDate(note.createdAt)}</li>
-                    ))}
-                  </ul>
-                </section>
-
-                <section className="stack-sm">
-                  <h3>Notes (autosave)</h3>
-                  <textarea
-                    className="input"
-                    rows={6}
-                    value={detailNoteText}
-                    onChange={(event) => setDetailNoteText(event.target.value)}
-                    placeholder="Add interview prep, recruiter updates, and follow-up notes"
-                  />
-                  <p className="muted-text">
-                    {noteStatus === "saving" ? "Saving..." : noteStatus === "saved" ? "Saved" : noteStatus === "error" ? "Failed to save" : ""}
-                  </p>
-                </section>
-
-                {selectedApplication.status === "offer" && (
-                  <section className="stack-sm">
-                    <h3>Offer Details</h3>
-                    <p className="muted-text">Base, bonus, equity, and vesting details will be tracked here in Phase 7.</p>
-                  </section>
-                )}
-
-                <section className="stack-sm">
-                  <h3>Contacts</h3>
-                  <p className="muted-text">Recruiter, hiring manager, and referral tracking placeholder for upcoming CRM-lite flow.</p>
-                </section>
-              </>
-            )}
-          </aside>
+          {!isMobile && <aside className="panel detail-drawer">{renderDetailContent()}</aside>}
         </div>
       </main>
+
+      {isMobile && selectedApplication && (
+        <div className="mobile-sheet-scrim" onClick={closeDetails}>
+          <div
+            className="mobile-sheet"
+            onClick={(event) => event.stopPropagation()}
+            onTouchStart={(event) => {
+              touchStartYRef.current = event.changedTouches[0]?.clientY || null;
+            }}
+            onTouchEnd={(event) => {
+              const start = touchStartYRef.current;
+              const end = event.changedTouches[0]?.clientY;
+              if (start !== null && end - start > 80) {
+                closeDetails();
+              }
+              touchStartYRef.current = null;
+            }}
+          >
+            <div className="sheet-handle" />
+            {renderDetailContent()}
+          </div>
+        </div>
+      )}
+
+      {isMobile && (
+        <div className="mobile-bottom-nav">
+          <button type="button" className="nav-item active">▦</button>
+          <button type="button" className="nav-item" onClick={() => setViewMode("kanban")}>☰</button>
+          <button type="button" className="nav-item">✦</button>
+          <button type="button" className="nav-item">⚙</button>
+        </div>
+      )}
+
+      {isMobile && (
+        <button
+          type="button"
+          className="mobile-fab"
+          onClick={() => {
+            importSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+            setTimeout(() => importInputRef.current?.focus(), 250);
+          }}
+        >
+          +
+        </button>
+      )}
 
       {contextMenu && (
         <div

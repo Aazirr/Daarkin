@@ -98,45 +98,45 @@ Acceptance:
 - Components consume tokens, not ad-hoc hardcoded values.
 
 ### 7) Typography system
-- [ ] Pick display/serif font for headings and company names.
-- [ ] Pick geometric sans for UI/body text.
-- [ ] Pick monospace for numeric values and dates.
-- [ ] Define text style scale (sizes, weights, line-heights) and apply consistently.
+- [x] Pick display/serif font for headings and company names.
+- [x] Pick geometric sans for UI/body text.
+- [x] Pick monospace for numeric values and dates.
+- [~] Define text style scale (sizes, weights, line-heights) and apply consistently.
 
 Acceptance:
 - Company names/headings, body text, and numbers are visually distinct and consistent.
 
 ### 8) Layout and information architecture
-- [ ] Add persistent desktop sidebar with collapsible icon-only mode.
-- [ ] Set icon-only width to about 52px with hover tooltips.
-- [ ] Constrain main content max-width (~1100px) and center content.
-- [ ] Add list/kanban view toggle and persist preference in localStorage.
-- [ ] Reuse same card language between list and kanban.
+- [x] Add persistent desktop sidebar with collapsible icon-only mode.
+- [x] Set icon-only width to about 52px with hover tooltips.
+- [x] Constrain main content max-width (~1100px) and center content.
+- [x] Add list/kanban view toggle and persist preference in localStorage.
+- [x] Reuse same card language between list and kanban.
 
 Acceptance:
 - App remains scannable on both 13-inch and large monitors.
 
 ### 9) Application list redesign
-- [ ] Show layered information hierarchy per row:
-- [ ] Primary: company + role.
-- [ ] Secondary: source + date.
-- [ ] Tertiary: inactivity attention signal.
-- [ ] Add left-border amber attention indicator for stale items (>14 days without status update).
-- [ ] Add deterministic company avatar tile color based on company name hash.
-- [ ] Use initials fallback and optional Clearbit logo if available.
-- [ ] Reveal edit/open-url action buttons on hover only.
-- [ ] Keep sort controls in filter bar (no drag reorder in list mode).
+- [x] Show layered information hierarchy per row:
+- [x] Primary: company + role.
+- [x] Secondary: source + date.
+- [x] Tertiary: inactivity attention signal.
+- [x] Add left-border amber attention indicator for stale items (>14 days without status update).
+- [x] Add deterministic company avatar tile color based on company name hash.
+- [x] Use initials fallback and optional Clearbit logo if available.
+- [x] Reveal edit/open-url action buttons on hover only.
+- [x] Keep sort controls in filter bar (no drag reorder in list mode).
 
 Acceptance:
 - Row stays dense/scannable while still exposing key context.
 
 ### 10) Search quality improvements
-- [ ] Keep instant search behavior (already started in Phase 4) and tune responsiveness.
+- [x] Keep instant search behavior (already started in Phase 4) and tune responsiveness.
 - [ ] Expand search scope to include recruiter/contact fields once available.
-- [ ] Add hit highlighting on matched text.
-- [ ] Add helpful zero-results quick-add state.
-- [ ] Add shortcuts: `/` and `Cmd+K` focus search.
-- [ ] Show subtle keyboard hint near search until first usage.
+- [x] Add hit highlighting on matched text.
+- [x] Add helpful zero-results quick-add state.
+- [x] Add shortcuts: `/` and `Cmd+K` focus search.
+- [x] Show subtle keyboard hint near search until first usage.
 
 Acceptance:
 - User can find items quickly and verify matches visually.
@@ -146,46 +146,46 @@ Acceptance:
 ## P2 - Mobile, polish, and delight
 
 ### 11) Motion and micro-interactions
-- [ ] Add purposeful motion only for state changes:
-- [ ] New row enter animation.
+- [~] Add purposeful motion only for state changes:
+- [x] New row enter animation.
 - [ ] Delete fade + collapse.
-- [ ] Badge color transition.
-- [ ] Drawer slide in/out.
-- [ ] Pipeline segment resize animation.
-- [ ] Import bar expand/collapse animation.
-- [ ] Define default/hover/active states for all interactive controls.
-- [ ] Avoid decorative looping animations and positional hover shifts.
+- [x] Badge color transition.
+- [x] Drawer slide in/out.
+- [x] Pipeline segment resize animation.
+- [x] Import bar expand/collapse animation.
+- [x] Define default/hover/active states for all interactive controls.
+- [x] Avoid decorative looping animations and positional hover shifts.
 
 Acceptance:
 - Motion communicates changes without feeling noisy.
 
 ### 12) Empty states
-- [ ] Build first-run empty state centered around import bar.
-- [ ] Add example URL chips that auto-populate and trigger extraction.
-- [ ] Build filtered empty state with contextual instructional message.
-- [ ] Build search empty state with quick-add conversion path.
+- [x] Build first-run empty state centered around import bar.
+- [x] Add example URL chips that auto-populate and trigger extraction.
+- [x] Build filtered empty state with contextual instructional message.
+- [x] Build search empty state with quick-add conversion path.
 
 Acceptance:
 - Empty screens guide action instead of feeling dead.
 
 ### 13) Keyboard navigation and focus
-- [ ] Implement row keyboard navigation (up/down).
-- [ ] Enter opens drawer, Escape closes drawer.
-- [ ] `s` opens status picker, `n` focuses notes in drawer.
-- [ ] Show discoverable shortcut hints on row hover/focus.
-- [ ] Ensure tab order matches reading order.
-- [ ] Add visible custom focus ring (2px + offset).
+- [x] Implement row keyboard navigation (up/down).
+- [x] Enter opens drawer, Escape closes drawer.
+- [x] `s` opens status picker, `n` focuses notes in drawer.
+- [x] Show discoverable shortcut hints on row hover/focus.
+- [~] Ensure tab order matches reading order.
+- [x] Add visible custom focus ring (2px + offset).
 
 Acceptance:
 - Core list + detail flow is usable without a mouse.
 
 ### 14) Mobile experience
-- [ ] Replace sidebar with bottom nav below 640px.
-- [ ] Collapse pipeline display for mobile, tap to expand details.
-- [ ] Increase row touch height (target at least 56px visual row).
-- [ ] Convert desktop drawer to full-screen bottom sheet.
-- [ ] Make sheet dismissable by swipe-down or scrim tap.
-- [ ] Make import action easy on mobile (FAB or pinned action).
+- [x] Replace sidebar with bottom nav below 640px.
+- [x] Collapse pipeline display for mobile, tap to expand details.
+- [x] Increase row touch height (target at least 56px visual row).
+- [x] Convert desktop drawer to full-screen bottom sheet.
+- [x] Make sheet dismissable by swipe-down or scrim tap.
+- [x] Make import action easy on mobile (FAB or pinned action).
 - [ ] Plan share-sheet integration as later mobile extension.
 
 Acceptance:
