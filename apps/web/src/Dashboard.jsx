@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { APPLICATION_STATUSES } from "@jat/shared";
-import { useAuth } from "./hooks/useAuth.js";
+import { useAuth } from "./hooks/useAuth";
 import {
   createApplication,
   deleteApplication,
