@@ -381,6 +381,7 @@ export default function App() {
                           <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted font-medium">
                             <span>📍 {application.location || "Location not specified"}</span>
                             <span>📅 Applied {formatDate(application.appliedAt)}</span>
+                            <span>🏷 Status updated {formatDate(application.statusChangedAt)}</span>
                             <span>🔄 Updated {formatDate(application.updatedAt)}</span>
                           </div>
                           {application.applicationUrl ? (

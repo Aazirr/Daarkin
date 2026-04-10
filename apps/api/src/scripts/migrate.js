@@ -9,6 +9,7 @@ const { Pool } = pg;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const migrationsDir = path.resolve(__dirname, "../../../../database/migrations");
+const migrationLockId = 902314;
 
 if (!env.databaseUrl) {
   throw new Error("DATABASE_URL is required to run migrations.");
@@ -33,8 +34,13 @@ async function readMigrationFiles() {
 
 async function run() {
   const client = await pool.connect();
+  let inTransaction = false;
+  let hasLock = false;
 
   try {
+    await client.query("SELECT pg_advisory_lock($1)", [migrationLockId]);
+    hasLock = true;
+
     await ensureMigrationsTable(client);
 
     const result = await client.query("SELECT filename FROM schema_migrations");
@@ -50,9 +56,11 @@ async function run() {
       const sql = await fs.readFile(path.join(migrationsDir, filename), "utf8");
 
       await client.query("BEGIN");
+      inTransaction = true;
       await client.query(sql);
       await client.query("INSERT INTO schema_migrations (filename) VALUES ($1)", [filename]);
       await client.query("COMMIT");
+      inTransaction = false;
 
       console.log(`Applied migration: ${filename}`);
     }
@@ -63,9 +71,15 @@ async function run() {
 
     console.log("Migrations complete.");
   } catch (error) {
-    await client.query("ROLLBACK");
+    if (inTransaction) {
+      await client.query("ROLLBACK");
+      inTransaction = false;
+    }
     throw error;
   } finally {
+    if (hasLock) {
+      await client.query("SELECT pg_advisory_unlock($1)", [migrationLockId]);
+    }
     client.release();
     await pool.end();
   }

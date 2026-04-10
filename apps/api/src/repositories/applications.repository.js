@@ -11,6 +11,7 @@ function mapApplicationRow(row) {
     location: row.location,
     applicationUrl: row.application_url,
     status: row.status,
+    statusChangedAt: row.status_changed_at,
     appliedAt: row.applied_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -21,7 +22,7 @@ export async function listApplications() {
   logger.info("Executing list applications query");
   const result = await pool.query(
     `
-      SELECT id, company_name, position_title, location, application_url, status, applied_at, created_at, updated_at
+      SELECT id, company_name, position_title, location, application_url, status, status_changed_at, applied_at, created_at, updated_at
       FROM applications
       ORDER BY updated_at DESC, created_at DESC
     `
@@ -35,7 +36,7 @@ export async function getApplicationById(id) {
   logger.info("Executing get application query", { id });
   const result = await pool.query(
     `
-      SELECT id, company_name, position_title, location, application_url, status, applied_at, created_at, updated_at
+      SELECT id, company_name, position_title, location, application_url, status, status_changed_at, applied_at, created_at, updated_at
       FROM applications
       WHERE id = $1
       LIMIT 1
@@ -64,7 +65,7 @@ export async function createApplication(input) {
         applied_at
       )
       VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING id, company_name, position_title, location, application_url, status, applied_at, created_at, updated_at
+      RETURNING id, company_name, position_title, location, application_url, status, status_changed_at, applied_at, created_at, updated_at
     `,
     [
       input.companyName,
@@ -113,7 +114,7 @@ export async function updateApplication(id, input) {
           status = $6,
           applied_at = $7
       WHERE id = $1
-      RETURNING id, company_name, position_title, location, application_url, status, applied_at, created_at, updated_at
+      RETURNING id, company_name, position_title, location, application_url, status, status_changed_at, applied_at, created_at, updated_at
     `,
     [
       id,

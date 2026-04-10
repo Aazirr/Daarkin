@@ -30,3 +30,11 @@
 - Keep DB migrations backward-safe during development.
 - Do not mix large refactors with feature delivery.
 - Validate status enum consistency across web, API, and DB.
+
+## Supabase Migration Runbook
+1. Confirm Vercel `DATABASE_URL` and local migration `DATABASE_URL` target the same Supabase database.
+2. Use the Supabase pooler URI with TLS: `?sslmode=require`.
+3. Run migrations from repository root:
+  - PowerShell: `$env:DATABASE_URL="<supabase-uri>"; npm run migrate`
+4. Verify table updates in Supabase SQL Editor before deploying API changes.
+5. If migration fails, fix SQL and rerun. Applied files are tracked in `schema_migrations`.

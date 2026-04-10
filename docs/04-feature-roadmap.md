@@ -15,9 +15,9 @@
 - [x] DB migration for `applications` table.
 
 ## Phase 2: Status Tracking
-- Status badge UI and status selector.
-- Enforce valid statuses in API.
-- Optional status-change timestamp field.
+- [x] Status badge UI and status selector.
+- [x] Enforce valid statuses in API.
+- [x] Optional status-change timestamp field.
 
 ## Phase 3: Notes
 - Add notes on application detail screen.
