@@ -6,9 +6,11 @@ A full-stack web app to help job seekers track applications through each hiring 
 Build a focused, fast, and clean tracker that makes job search management easier across desktop and mobile.
 
 ## Tech Stack
-- Frontend: React, Tailwind CSS, Vite
+- Frontend: React 18, TypeScript, Tailwind CSS, Vite
 - Backend: Node.js, Express.js
-- Database: PostgreSQL
+- Database: PostgreSQL with migrations
+- Authentication: JWT tokens, bcrypt password hashing
+- State Management: React Context API with localStorage session persistence
 - Tooling: Git
 
 ## Repo Layout
@@ -47,6 +49,7 @@ Default local URLs:
 - `docs/03-project-structure.md`
 - `docs/04-feature-roadmap.md`
 - `docs/05-data-model-and-api.md`
+- `docs/08-authentication.md`
 
 ## MVP Goal
 Allow users to create, update, search, and track job applications with notes and clear status transitions.
@@ -57,3 +60,14 @@ Allow users to create, update, search, and track job applications with notes and
 - API foundation with Express and shared response envelope
 - Shared status enum contract (`applied`, `interview`, `offer`, `rejected`)
 - PostgreSQL connection setup and SQL migration runner
+
+## Phase 3.5 Delivered: Authentication & Session Caching
+- User registration and login with bcrypt password hashing
+- JWT token generation and validation
+- Session persistence via localStorage (survives page refresh without re-login)
+- Automatic session hydration on app load
+- Auth middleware for protected API routes
+- TypeScript auth service (`auth-api.ts`) for login/register/logout
+- React Context-based auth state management with `useAuth()` hook
+- Conditional routing between Landing (unauthenticated) and Dashboard (authenticated)
+- Comprehensive authentication documentation
