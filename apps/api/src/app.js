@@ -3,6 +3,7 @@ import cors from "cors";
 import applicationsRoutes from "./routes/applications.routes.js";
 import healthRoutes from "./routes/health.routes.js";
 import metaRoutes from "./routes/meta.routes.js";
+import notesRoutes from "./routes/notes.routes.js";
 import { errorHandler } from "./middlewares/error-handler.js";
 import { createLogger } from "./utils/logger.js";
 
@@ -27,6 +28,7 @@ app.use((req, res, next) => {
 app.use("/api", healthRoutes);
 app.use("/api", metaRoutes);
 app.use("/api", applicationsRoutes);
+app.use("/api", notesRoutes);
 
 app.use((req, res) => {
   logger.warn(`Route not found: ${req.method} ${req.originalUrl}`);

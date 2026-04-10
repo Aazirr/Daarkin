@@ -20,9 +20,9 @@
 - [x] Optional status-change timestamp field.
 
 ## Phase 3: Notes
-- Add notes on application detail screen.
-- Create/list/delete notes via API.
-- DB migration for `application_notes` table.
+- [x] Add notes on application detail screen.
+- [x] Create/list/delete notes via API.
+- [x] DB migration for `application_notes` table.
 
 ## Phase 4: Search and Filters
 - Text search (company/role/location/notes).

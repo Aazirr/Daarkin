@@ -6,6 +6,12 @@ import {
   fetchApplications,
   updateApplication,
 } from "./services/applications-api";
+import {
+  createNote,
+  deleteNote,
+  fetchNotes,
+  updateNote,
+} from "./services/notes-api";
 
 const STATUS_LABELS = {
   applied: "Applied",
@@ -56,6 +62,13 @@ export default function App() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  
+  // Notes state
+  const [expandedNotesId, setExpandedNotesId] = useState(null);
+  const [notes, setNotes] = useState({});
+  const [loadingNotes, setLoadingNotes] = useState(false);
+  const [newNoteText, setNewNoteText] = useState("");
+  const [savingNote, setSavingNote] = useState(false);
 
   async function loadApplications() {
     setLoading(true);
@@ -77,6 +90,87 @@ export default function App() {
   useEffect(() => {
     loadApplications();
   }, []);
+
+  async function loadNotesForApplication(applicationId) {
+    setLoadingNotes(true);
+    console.info("[web:app] load-notes-start", { applicationId });
+
+    try {
+      const data = await fetchNotes(applicationId);
+      setNotes((prev) => ({
+        ...prev,
+        [applicationId]: data.notes || [],
+      }));
+      console.info("[web:app] load-notes-success", { applicationId, count: data.notes?.length || 0 });
+    } catch (loadError) {
+      console.error("[web:app] load-notes-failed", loadError);
+      setError(loadError.message);
+    } finally {
+      setLoadingNotes(false);
+    }
+  }
+
+  async function handleAddNote(applicationId) {
+    if (!newNoteText.trim()) {
+      setError("Please enter a note before saving.");
+      return;
+    }
+
+    setSavingNote(true);
+    setError("");
+    setMessage("");
+    console.info("[web:app] create-note-start", { applicationId, textLength: newNoteText.length });
+
+    try {
+      await createNote(applicationId, { noteText: newNoteText });
+      setNewNoteText("");
+      await loadNotesForApplication(applicationId);
+      setMessage("Note added successfully.");
+      console.info("[web:app] create-note-success", { applicationId });
+    } catch (createError) {
+      console.error("[web:app] create-note-failed", createError);
+      setError(createError.message);
+    } finally {
+      setSavingNote(false);
+    }
+  }
+
+  async function handleDeleteNote(applicationId, noteId) {
+    const confirmed = window.confirm("Delete this note?");
+
+    if (!confirmed) {
+      console.info("[web:app] delete-note-cancelled", { noteId });
+      return;
+    }
+
+    setSavingNote(true);
+    setError("");
+    setMessage("");
+    console.info("[web:app] delete-note-start", { noteId, applicationId });
+
+    try {
+      await deleteNote(noteId);
+      await loadNotesForApplication(applicationId);
+      setMessage("Note deleted successfully.");
+      console.info("[web:app] delete-note-success", { noteId });
+    } catch (deleteError) {
+      console.error("[web:app] delete-note-failed", deleteError);
+      setError(deleteError.message);
+    } finally {
+      setSavingNote(false);
+    }
+  }
+
+  function toggleNotesExpanded(applicationId) {
+    if (expandedNotesId === applicationId) {
+      setExpandedNotesId(null);
+    } else {
+      setExpandedNotesId(applicationId);
+      if (!notes[applicationId]) {
+        loadNotesForApplication(applicationId);
+      }
+    }
+  }
 
   const summary = useMemo(() => {
     return APPLICATION_STATUSES.reduce(
@@ -365,55 +459,116 @@ export default function App() {
                   </div>
                 ) : (
                   applications.map((application) => (
-                    <article
-                      key={application.id}
-                      className="rounded-lg border border-slate/10 bg-gradient-to-br from-white to-white/50 p-5 transition hover:shadow-md-soft hover:border-slate/20"
-                    >
-                      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                        <div className="flex-1">
-                          <div className="flex flex-wrap items-center gap-3">
-                            <h3 className="font-bold text-lg text-slate">{application.companyName}</h3>
-                            <span className="inline-block rounded-full border border-teal/30 bg-gradient-to-r from-teal/10 to-slate/5 px-3 py-1 text-xs font-bold uppercase tracking-wider text-teal">
-                              {STATUS_LABELS[application.status]}
-                            </span>
+                    <div key={application.id}>
+                      <article className="rounded-lg border border-slate/10 bg-gradient-to-br from-white to-white/50 p-5 transition hover:shadow-md-soft hover:border-slate/20">
+                        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                          <div className="flex-1">
+                            <div className="flex flex-wrap items-center gap-3">
+                              <h3 className="font-bold text-lg text-slate">{application.companyName}</h3>
+                              <span className="inline-block rounded-full border border-teal/30 bg-gradient-to-r from-teal/10 to-slate/5 px-3 py-1 text-xs font-bold uppercase tracking-wider text-teal">
+                                {STATUS_LABELS[application.status]}
+                              </span>
+                            </div>
+                            <p className="mt-2 text-base font-semibold text-charcoal">{application.positionTitle}</p>
+                            <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted font-medium">
+                              <span>📍 {application.location || "Location not specified"}</span>
+                              <span>📅 Applied {formatDate(application.appliedAt)}</span>
+                              <span>🏷 Status updated {formatDate(application.statusChangedAt)}</span>
+                              <span>🔄 Updated {formatDate(application.updatedAt)}</span>
+                            </div>
+                            {application.applicationUrl ? (
+                              <a
+                                href={application.applicationUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="mt-3 inline-flex gap-1 text-sm font-bold text-teal underline-offset-2 hover:underline"
+                              >
+                                Open Job Post →
+                              </a>
+                            ) : null}
                           </div>
-                          <p className="mt-2 text-base font-semibold text-charcoal">{application.positionTitle}</p>
-                          <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted font-medium">
-                            <span>📍 {application.location || "Location not specified"}</span>
-                            <span>📅 Applied {formatDate(application.appliedAt)}</span>
-                            <span>🏷 Status updated {formatDate(application.statusChangedAt)}</span>
-                            <span>🔄 Updated {formatDate(application.updatedAt)}</span>
-                          </div>
-                          {application.applicationUrl ? (
-                            <a
-                              href={application.applicationUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="mt-3 inline-flex gap-1 text-sm font-bold text-teal underline-offset-2 hover:underline"
-                            >
-                              Open Job Post →
-                            </a>
-                          ) : null}
-                        </div>
 
-                        <div className="flex gap-2 md:flex-col md:shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => startEdit(application)}
-                            className="rounded-lg border border-slate/20 bg-gradient-to-br from-slate/10 to-slate/5 px-4 py-2 text-xs font-bold uppercase tracking-wider text-slate transition hover:bg-slate hover:text-white hover:border-slate/80 shadow-sm-soft"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(application)}
-                            className="rounded-lg border border-red-200 bg-gradient-to-br from-red-50 to-red-50/50 px-4 py-2 text-xs font-bold uppercase tracking-wider text-red-700 transition hover:bg-red-100 shadow-sm-soft"
-                          >
-                            Delete
-                          </button>
+                          <div className="flex gap-2 md:flex-col md:shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => toggleNotesExpanded(application.id)}
+                              className="rounded-lg border border-teal/20 bg-gradient-to-br from-teal/10 to-teal/5 px-4 py-2 text-xs font-bold uppercase tracking-wider text-teal transition hover:bg-teal hover:text-white hover:border-teal/80 shadow-sm-soft"
+                            >
+                              📝 Notes
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => startEdit(application)}
+                              className="rounded-lg border border-slate/20 bg-gradient-to-br from-slate/10 to-slate/5 px-4 py-2 text-xs font-bold uppercase tracking-wider text-slate transition hover:bg-slate hover:text-white hover:border-slate/80 shadow-sm-soft"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(application)}
+                              className="rounded-lg border border-red-200 bg-gradient-to-br from-red-50 to-red-50/50 px-4 py-2 text-xs font-bold uppercase tracking-wider text-red-700 transition hover:bg-red-100 shadow-sm-soft"
+                            >
+                              Delete
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    </article>
+                      </article>
+
+                      {/* Notes Panel - Show when expanded */}
+                      {expandedNotesId === application.id && (
+                        <div className="mt-3 rounded-lg border border-teal/20 bg-gradient-to-br from-teal/5 to-teal/2 p-5">
+                          <h4 className="mb-4 text-sm font-bold text-slate">Notes for {application.companyName}</h4>
+
+                          {/* Notes List */}
+                          {loadingNotes ? (
+                            <div className="text-sm text-muted mb-4">Loading notes...</div>
+                          ) : (notes[application.id] || []).length === 0 ? (
+                            <div className="text-sm text-muted mb-4 italic">No notes yet. Create one below.</div>
+                          ) : (
+                            <div className="space-y-3 mb-4">
+                              {(notes[application.id] || []).map((note) => (
+                                <div key={note.id} className="rounded-lg border border-teal/10 bg-white p-3 text-sm">
+                                  <div className="flex items-start justify-between gap-3">
+                                    <p className="text-charcoal flex-1">{note.noteText}</p>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteNote(application.id, note.id)}
+                                      disabled={savingNote}
+                                      className="text-xs font-bold text-red-600 hover:text-red-800 transition flex-shrink-0"
+                                    >
+                                      ✕
+                                    </button>
+                                  </div>
+                                  <div className="mt-2 text-xs text-muted">
+                                    {formatDate(note.createdAt)}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Add Note Form */}
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={newNoteText}
+                              onChange={(event) => setNewNoteText(event.target.value)}
+                              placeholder="Add a note..."
+                              disabled={savingNote}
+                              className="flex-1 rounded-lg border border-teal/20 bg-white px-3 py-2 text-sm text-charcoal outline-none transition focus:border-teal focus:ring-2 focus:ring-teal/10 disabled:opacity-60 placeholder:text-muted/50"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleAddNote(application.id)}
+                              disabled={savingNote || !newNoteText.trim()}
+                              className="rounded-lg bg-gradient-to-r from-teal to-teal px-4 py-2 text-xs font-bold text-white transition hover:shadow-md-soft disabled:cursor-not-allowed disabled:opacity-60 shadow-sm-soft"
+                            >
+                              {savingNote ? "..." : "Add"}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   ))
                 )}
               </div>
