@@ -3,8 +3,13 @@ let app;
 // Dynamically import the ESM app module
 async function initializeApp() {
   if (!app) {
-    const { default: expressApp } = await import("../apps/api/src/app.js");
-    app = expressApp;
+    try {
+      const module = await import("../apps/api/src/app.js");
+      app = module.default;
+    } catch (error) {
+      console.error("Failed to import app:", error);
+      throw error;
+    }
   }
   return app;
 }
@@ -12,7 +17,7 @@ async function initializeApp() {
 module.exports = async (req, res) => {
   try {
     const expressApp = await initializeApp();
-    // Pass the request directly to the Express app
+    // Call the Express app as middleware
     expressApp(req, res);
   } catch (error) {
     console.error("Error initializing app:", error);
