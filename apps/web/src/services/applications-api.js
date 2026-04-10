@@ -15,11 +15,36 @@ async function request(path, options = {}) {
     ...options,
   });
 
-  const payload = await response.json();
+  const contentType = response.headers.get("content-type") || "";
+  const rawBody = await response.text();
+
+  let payload = null;
+
+  if (contentType.includes("application/json")) {
+    try {
+      payload = rawBody ? JSON.parse(rawBody) : null;
+    } catch (parseError) {
+      log("request-parse-error", {
+        path,
+        status: response.status,
+        contentType,
+        snippet: rawBody.slice(0, 120),
+      });
+      throw new Error(`API returned invalid JSON from ${path}.`);
+    }
+  } else {
+    log("request-non-json-response", {
+      path,
+      status: response.status,
+      contentType,
+      snippet: rawBody.slice(0, 120),
+    });
+  }
+
   log("request-finish", { path, status: response.status, success: payload?.success !== false });
 
   if (!response.ok || payload?.success === false) {
-    const message = payload?.error?.message || "Request failed.";
+    const message = payload?.error?.message || rawBody || "Request failed.";
     log("request-error", { path, status: response.status, message });
     throw new Error(message);
   }
