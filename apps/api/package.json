@@ -2,10 +2,24 @@
   "name": "@jat/api",
   "private": true,
   "version": "0.1.0",
+  "type": "module",
   "scripts": {
-    "dev": "echo \"API not initialized yet. Next step: scaffold Express app.\"",
-    "build": "echo \"API build not configured yet.\"",
-    "lint": "echo \"API lint not configured yet.\"",
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "migrate": "node src/scripts/migrate.js",
+    "build": "echo \"No build step required for API yet.\"",
+    "lint": "echo \"Lint not configured yet.\"",
     "test": "echo \"API tests not configured yet.\""
+  },
+  "dependencies": {
+    "@jat/shared": "file:../../packages/shared",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.21.2",
+    "pg": "^8.16.3",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
   }
 }

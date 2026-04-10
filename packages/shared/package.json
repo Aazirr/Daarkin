@@ -2,9 +2,13 @@
   "name": "@jat/shared",
   "private": true,
   "version": "0.1.0",
+  "type": "module",
   "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
   "scripts": {
-    "build": "echo \"Shared package build not configured yet.\"",
+    "build": "echo \"No build step required for shared package yet.\"",
     "lint": "echo \"Shared lint not configured yet.\"",
     "test": "echo \"Shared tests not configured yet.\""
   }

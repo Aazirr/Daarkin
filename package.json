@@ -7,8 +7,11 @@
     "packages/*"
   ],
   "scripts": {
+    "dev": "echo \"Run npm run dev:web and npm run dev:api in separate terminals.\"",
     "dev:web": "npm --workspace apps/web run dev",
     "dev:api": "npm --workspace apps/api run dev",
+    "start:api": "npm --workspace apps/api run start",
+    "migrate": "npm --workspace apps/api run migrate",
     "build": "npm run -ws build",
     "lint": "npm run -ws lint",
     "test": "npm run -ws test"

@@ -1,11 +1,11 @@
 # Feature Roadmap
 
 ## Phase 0: Foundation
-- Set up monorepo structure.
-- Initialize web app (React + Vite + Tailwind).
-- Initialize API app (Express).
-- Set up PostgreSQL connection and migration strategy.
-- Define shared status enum and base API response contract.
+- [x] Set up monorepo structure.
+- [x] Initialize web app (React + Vite + Tailwind).
+- [x] Initialize API app (Express).
+- [x] Set up PostgreSQL connection and migration strategy.
+- [x] Define shared status enum and base API response contract.
 
 ## Phase 1: Application CRUD
 - Create application form.
