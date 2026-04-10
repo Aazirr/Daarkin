@@ -11,6 +11,9 @@ import {
   listApplications,
   updateApplication,
 } from "../repositories/applications.repository.js";
+import { createLogger } from "../utils/logger.js";
+
+const logger = createLogger("applications-service");
 
 function normalizeOptionalText(value) {
   if (value === undefined) {
@@ -83,21 +86,29 @@ export function validateUpdatePayload(body) {
 }
 
 export async function getApplications() {
+  logger.info("Loading applications from repository");
   return listApplications();
 }
 
 export async function getApplication(id) {
+  logger.info("Loading application from repository", { id });
   return getApplicationById(id);
 }
 
 export async function createNewApplication(body) {
+  logger.info("Normalizing create payload", {
+    companyName: body.companyName,
+    positionTitle: body.positionTitle,
+  });
   return createApplication(normalizeCreatePayload(body));
 }
 
 export async function updateExistingApplication(id, body) {
+  logger.info("Normalizing update payload", { id, fields: Object.keys(body) });
   return updateApplication(id, normalizeUpdatePayload(body));
 }
 
 export async function removeApplication(id) {
+  logger.info("Removing application from repository", { id });
   return deleteApplication(id);
 }

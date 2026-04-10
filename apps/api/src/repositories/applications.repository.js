@@ -1,4 +1,7 @@
 import { pool } from "../config/db.js";
+import { createLogger } from "../utils/logger.js";
+
+const logger = createLogger("applications-repository");
 
 function mapApplicationRow(row) {
   return {
@@ -15,6 +18,7 @@ function mapApplicationRow(row) {
 }
 
 export async function listApplications() {
+  logger.info("Executing list applications query");
   const result = await pool.query(
     `
       SELECT id, company_name, position_title, location, application_url, status, applied_at, created_at, updated_at
@@ -23,10 +27,12 @@ export async function listApplications() {
     `
   );
 
+  logger.info("List applications query completed", { rows: result.rowCount });
   return result.rows.map(mapApplicationRow);
 }
 
 export async function getApplicationById(id) {
+  logger.info("Executing get application query", { id });
   const result = await pool.query(
     `
       SELECT id, company_name, position_title, location, application_url, status, applied_at, created_at, updated_at
@@ -37,10 +43,16 @@ export async function getApplicationById(id) {
     [id]
   );
 
+  logger.info("Get application query completed", { found: Boolean(result.rows[0]) });
   return result.rows[0] ? mapApplicationRow(result.rows[0]) : null;
 }
 
 export async function createApplication(input) {
+  logger.info("Executing create application query", {
+    companyName: input.companyName,
+    positionTitle: input.positionTitle,
+    status: input.status,
+  });
   const result = await pool.query(
     `
       INSERT INTO applications (
@@ -64,10 +76,12 @@ export async function createApplication(input) {
     ]
   );
 
+  logger.info("Create application query completed", { id: result.rows[0].id });
   return mapApplicationRow(result.rows[0]);
 }
 
 export async function updateApplication(id, input) {
+  logger.info("Executing update application flow", { id, fields: Object.keys(input) });
   const current = await getApplicationById(id);
 
   if (!current) {
@@ -112,10 +126,13 @@ export async function updateApplication(id, input) {
     ]
   );
 
+  logger.info("Update application query completed", { id: result.rows[0].id });
   return mapApplicationRow(result.rows[0]);
 }
 
 export async function deleteApplication(id) {
+  logger.info("Executing delete application query", { id });
   const result = await pool.query("DELETE FROM applications WHERE id = $1 RETURNING id", [id]);
+  logger.info("Delete application query completed", { id, deleted: result.rowCount > 0 });
   return result.rowCount > 0;
 }

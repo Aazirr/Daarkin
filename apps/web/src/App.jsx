@@ -60,11 +60,14 @@ export default function App() {
   async function loadApplications() {
     setLoading(true);
     setError("");
+    console.info("[web:app] load-applications-start");
 
     try {
       const data = await fetchApplications();
       setApplications(data.applications || []);
+      console.info("[web:app] load-applications-success", { count: data.applications?.length || 0 });
     } catch (loadError) {
+      console.error("[web:app] load-applications-failed", loadError);
       setError(loadError.message);
     } finally {
       setLoading(false);
@@ -91,6 +94,7 @@ export default function App() {
   }
 
   function startEdit(application) {
+    console.info("[web:app] start-edit", { id: application.id, companyName: application.companyName });
     setEditingId(application.id);
     setForm({
       companyName: application.companyName || "",
@@ -108,6 +112,7 @@ export default function App() {
     setSaving(true);
     setError("");
     setMessage("");
+    console.info("[web:app] submit-start", { editingId: editingId || null });
 
     try {
       const payload = cleanPayload(form);
@@ -115,8 +120,10 @@ export default function App() {
       await request;
       await loadApplications();
       setMessage(editingId ? "Application updated." : "Application created.");
+      console.info("[web:app] submit-success", { action: editingId ? "update" : "create" });
       resetForm();
     } catch (submitError) {
+      console.error("[web:app] submit-failed", submitError);
       setError(submitError.message);
     } finally {
       setSaving(false);
@@ -127,12 +134,14 @@ export default function App() {
     const confirmed = window.confirm(`Delete application for ${application.companyName}?`);
 
     if (!confirmed) {
+      console.info("[web:app] delete-cancelled", { id: application.id });
       return;
     }
 
     setSaving(true);
     setError("");
     setMessage("");
+    console.info("[web:app] delete-start", { id: application.id, companyName: application.companyName });
 
     try {
       await deleteApplication(application.id);
@@ -141,7 +150,9 @@ export default function App() {
         resetForm();
       }
       setMessage("Application deleted.");
+      console.info("[web:app] delete-success", { id: application.id });
     } catch (deleteError) {
+      console.error("[web:app] delete-failed", deleteError);
       setError(deleteError.message);
     } finally {
       setSaving(false);
