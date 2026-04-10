@@ -3,14 +3,15 @@
 @tailwind utilities;
 
 :root {
-  font-family: "Trebuchet MS", "Lucida Sans Unicode", "Segoe UI", sans-serif;
-  color: #2C2C2C;
-  background: #F5F5F7;
-  --cloud-pearl: #F5F5F7;
+  --cream: #FAF9F7;
+  --card-bg: #FFFFFF;
   --oxblood: #4A0E0E;
+  --slate: #2C3E50;
+  --teal: #1B8B8B;
   --gold: #C5A059;
-  --silver-mist: #E2E2E2;
-  --charcoal: #2C2C2C;
+  --silver-mist: #E8E8E8;
+  --charcoal: #1A1A1A;
+  --muted: #6B7280;
 }
 
 * {
@@ -20,8 +21,9 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background: #F5F5F7;
-  color: #2C2C2C;
+  background: linear-gradient(135deg, #FAF9F7 0%, #FCF9F6 100%);
+  color: #1A1A1A;
+  font-family: system-ui, -apple-system, sans-serif;
 }
 
 a {

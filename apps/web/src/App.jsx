@@ -149,146 +149,154 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-cloudPearl px-4 py-8 text-charcoal md:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-cream via-cream to-slate/5 px-4 py-8 text-charcoal md:px-8">
       <main className="mx-auto max-w-7xl">
         {/* Header */}
-        <header className="mb-10 space-y-3 border-b border-silverMist pb-8">
-          <div className="flex items-center gap-3">
-            <div className="h-1 w-8 bg-oxblood rounded-full"></div>
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-oxblood">Job Tracker</p>
+        <header className="mb-12 space-y-4">
+          <div className="flex items-center gap-2">
+            <div className="h-0.5 w-3 bg-gradient-to-r from-oxblood to-teal rounded-full"></div>
+            <p className="text-xs font-semibold uppercase tracking-[0.4em] text-slate">Opportunity Tracker</p>
           </div>
-          <h1 className="text-5xl font-light tracking-tight text-charcoal md:text-6xl">
-            Track Every Opportunity
-          </h1>
-          <p className="max-w-2xl text-base leading-relaxed text-charcoal/70">
-            Manage your job applications with a clean, professional interface. Add roles, track progress, and never lose sight of an opportunity.
-          </p>
+          <div className="max-w-3xl space-y-3">
+            <h1 className="text-5xl md:text-6xl font-bold tracking-tight bg-gradient-to-r from-slate via-oxblood to-slate bg-clip-text text-transparent">
+              Manage Every Application
+            </h1>
+            <p className="text-lg text-muted leading-relaxed max-w-2xl">
+              Track job opportunities with a sophisticated, professional interface. Never lose track of where you applied, your progress, or next steps.
+            </p>
+          </div>
+          <div className="h-px bg-gradient-to-r from-slate/20 via-slate/10 to-transparent mt-6"></div>
         </header>
 
-        <div className="grid gap-8 md:grid-cols-[1fr_1.2fr]">
+        <div className="grid gap-10 md:grid-cols-[0.9fr_1.4fr]">
           {/* Left: Summary Stats and Info */}
-          <div className="space-y-6">
+          <div className="space-y-8">
             {/* Stats Grid */}
-            <div className="grid grid-cols-2 gap-4">
-              {Object.entries(summary).map(([status, count]) => (
-                <div key={status} className="rounded-xl border border-silverMist bg-white p-4 shadow-sm">
-                  <div className="text-xs font-medium uppercase tracking-widest text-charcoal/50">
-                    {STATUS_LABELS[status]}
+            <div className="space-y-3">
+              <p className="text-xs font-bold uppercase tracking-widest text-slate/60 px-1">Overview</p>
+              <div className="grid grid-cols-2 gap-3">
+                {Object.entries(summary).map(([status, count]) => (
+                  <div key={status} className="rounded-lg bg-gradient-to-br from-white to-slate/5 border border-slate/10 p-5 shadow-sm-soft hover:shadow-md-soft transition-shadow">
+                    <div className="text-xs font-bold uppercase tracking-wider text-slate/70">
+                      {STATUS_LABELS[status]}
+                    </div>
+                    <div className="mt-3 text-4xl font-bold bg-gradient-to-r from-slate to-oxblood bg-clip-text text-transparent">
+                      {count}
+                    </div>
                   </div>
-                  <div className="mt-3 text-3xl font-light text-oxblood">{count}</div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
 
             {/* Info Box */}
-            <div className="rounded-xl border border-gold/30 bg-white p-6 shadow-sm">
-              <div className="mb-3 flex items-center gap-2">
-                <div className="h-0.5 w-4 bg-gold rounded-full"></div>
-                <h3 className="text-sm font-semibold text-gold">Premium Features</h3>
+            <div className="rounded-lg bg-gradient-to-br from-white to-teal/5 border border-teal/20 p-6 shadow-md-soft">
+              <div className="mb-4 flex items-center gap-2">
+                <div className="h-1 w-5 bg-gradient-to-r from-teal to-slate rounded-full"></div>
+                <h3 className="text-sm font-bold text-slate uppercase tracking-wider">Ready to Use</h3>
               </div>
-              <ul className="space-y-2 text-sm text-charcoal/70">
-                <li className="flex items-start gap-2">
-                  <span className="mt-1 h-1 w-1 rounded-full bg-gold flex-shrink-0" />
-                  <span>Full CRUD application management</span>
+              <ul className="space-y-3 text-sm text-muted">
+                <li className="flex items-start gap-3">
+                  <span className="mt-1 h-2 w-2 rounded-full bg-teal flex-shrink-0" />
+                  <span className="font-medium">Complete CRUD for job applications</span>
                 </li>
-                <li className="flex items-start gap-2">
-                  <span className="mt-1 h-1 w-1 rounded-full bg-gold flex-shrink-0" />
-                  <span>Status tracking with timeline</span>
+                <li className="flex items-start gap-3">
+                  <span className="mt-1 h-2 w-2 rounded-full bg-teal flex-shrink-0" />
+                  <span className="font-medium">Real-time status tracking</span>
                 </li>
-                <li className="flex items-start gap-2">
-                  <span className="mt-1 h-1 w-1 rounded-full bg-gold flex-shrink-0" />
-                  <span>PostgreSQL-backed persistence</span>
+                <li className="flex items-start gap-3">
+                  <span className="mt-1 h-2 w-2 rounded-full bg-teal flex-shrink-0" />
+                  <span className="font-medium">PostgreSQL-backed persistence</span>
                 </li>
               </ul>
             </div>
 
             {/* Messages */}
             {message ? (
-              <div className="rounded-xl border border-oxblood/20 bg-oxblood/5 px-4 py-3 text-sm text-oxblood">
+              <div className="rounded-lg border border-teal/30 bg-gradient-to-r from-teal/10 to-slate/5 px-4 py-3 text-sm font-medium text-teal shadow-sm-soft">
                 ✓ {message}
               </div>
             ) : null}
 
             {error ? (
-              <div className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
-                ✖ {error}
+              <div className="rounded-lg border border-red-200 bg-gradient-to-r from-red-50 to-red-50/30 px-4 py-3 text-sm font-medium text-red-700 shadow-sm-soft">
+                ✗ {error}
               </div>
             ) : null}
           </div>
 
           {/* Right: Form and List */}
-          <div className="space-y-6">
+          <div className="space-y-8">
             {/* Form */}
-            <form onSubmit={handleSubmit} className="rounded-xl border border-silverMist bg-white p-6 shadow-sm">
-              <div className="mb-5 flex items-center justify-between">
+            <form onSubmit={handleSubmit} className="rounded-lg border border-slate/15 bg-gradient-to-br from-white to-slate/2 p-8 shadow-md-soft">
+              <div className="mb-7 flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg font-semibold text-charcoal">
-                    {editingId ? "Edit Application" : "Add Application"}
+                  <h2 className="text-xl font-bold text-slate">
+                    {editingId ? "Edit Application" : "Add New Application"}
                   </h2>
-                  <p className="text-sm text-charcoal/50">Save your opportunity details</p>
+                  <p className="text-sm text-muted mt-1">Capture opportunity details and track progress</p>
                 </div>
                 {editingId ? (
                   <button
                     type="button"
                     onClick={resetForm}
-                    className="rounded-lg border border-charcoal/20 px-3 py-1.5 text-xs font-medium text-charcoal/70 transition hover:bg-silverMist"
+                    className="rounded-lg border border-slate/20 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-muted transition hover:bg-slate/5 hover:text-slate"
                   >
                     Cancel
                   </button>
                 ) : null}
               </div>
 
-              <div className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <label className="space-y-1.5 text-sm font-medium text-charcoal">
-                    Company Name
+              <div className="space-y-5">
+                <div className="grid gap-5 md:grid-cols-2">
+                  <label className="space-y-2 text-sm">
+                    <span className="font-bold text-slate">Company Name</span>
                     <input
                       required
                       value={form.companyName}
                       onChange={(event) => setForm({ ...form, companyName: event.target.value })}
-                      className="w-full rounded-lg border border-silverMist bg-cloudPearl px-3 py-2.5 text-sm text-charcoal outline-none transition focus:border-oxblood focus:ring-1 focus:ring-oxblood/20"
+                      className="w-full rounded-lg border border-slate/15 bg-white px-4 py-3 text-sm text-charcoal outline-none transition focus:border-slate focus:ring-2 focus:ring-slate/10 focus:shadow-md-soft placeholder:text-muted/50"
                       placeholder="Acme Corp"
                     />
                   </label>
 
-                  <label className="space-y-1.5 text-sm font-medium text-charcoal">
-                    Position Title
+                  <label className="space-y-2 text-sm">
+                    <span className="font-bold text-slate">Position Title</span>
                     <input
                       required
                       value={form.positionTitle}
                       onChange={(event) => setForm({ ...form, positionTitle: event.target.value })}
-                      className="w-full rounded-lg border border-silverMist bg-cloudPearl px-3 py-2.5 text-sm text-charcoal outline-none transition focus:border-oxblood focus:ring-1 focus:ring-oxblood/20"
+                      className="w-full rounded-lg border border-slate/15 bg-white px-4 py-3 text-sm text-charcoal outline-none transition focus:border-slate focus:ring-2 focus:ring-slate/10 focus:shadow-md-soft placeholder:text-muted/50"
                       placeholder="Frontend Developer"
                     />
                   </label>
 
-                  <label className="space-y-1.5 text-sm font-medium text-charcoal">
-                    Location
+                  <label className="space-y-2 text-sm">
+                    <span className="font-bold text-slate">Location</span>
                     <input
                       value={form.location}
                       onChange={(event) => setForm({ ...form, location: event.target.value })}
-                      className="w-full rounded-lg border border-silverMist bg-cloudPearl px-3 py-2.5 text-sm text-charcoal outline-none transition focus:border-oxblood focus:ring-1 focus:ring-oxblood/20"
+                      className="w-full rounded-lg border border-slate/15 bg-white px-4 py-3 text-sm text-charcoal outline-none transition focus:border-slate focus:ring-2 focus:ring-slate/10 focus:shadow-md-soft placeholder:text-muted/50"
                       placeholder="Remote"
                     />
                   </label>
 
-                  <label className="space-y-1.5 text-sm font-medium text-charcoal">
-                    Application URL
+                  <label className="space-y-2 text-sm">
+                    <span className="font-bold text-slate">Application URL</span>
                     <input
                       type="url"
                       value={form.applicationUrl}
                       onChange={(event) => setForm({ ...form, applicationUrl: event.target.value })}
-                      className="w-full rounded-lg border border-silverMist bg-cloudPearl px-3 py-2.5 text-sm text-charcoal outline-none transition focus:border-oxblood focus:ring-1 focus:ring-oxblood/20"
+                      className="w-full rounded-lg border border-slate/15 bg-white px-4 py-3 text-sm text-charcoal outline-none transition focus:border-slate focus:ring-2 focus:ring-slate/10 focus:shadow-md-soft placeholder:text-muted/50"
                       placeholder="https://jobs.example.com/123"
                     />
                   </label>
 
-                  <label className="space-y-1.5 text-sm font-medium text-charcoal">
-                    Status
+                  <label className="space-y-2 text-sm">
+                    <span className="font-bold text-slate">Status</span>
                     <select
                       value={form.status}
                       onChange={(event) => setForm({ ...form, status: event.target.value })}
-                      className="w-full rounded-lg border border-silverMist bg-cloudPearl px-3 py-2.5 text-sm text-charcoal outline-none transition focus:border-oxblood focus:ring-1 focus:ring-oxblood/20"
+                      className="w-full rounded-lg border border-slate/15 bg-white px-4 py-3 text-sm text-charcoal outline-none transition focus:border-slate focus:ring-2 focus:ring-slate/10 focus:shadow-md-soft"
                     >
                       {APPLICATION_STATUSES.map((status) => (
                         <option key={status} value={status}>
@@ -298,13 +306,13 @@ export default function App() {
                     </select>
                   </label>
 
-                  <label className="space-y-1.5 text-sm font-medium text-charcoal">
-                    Applied Date
+                  <label className="space-y-2 text-sm">
+                    <span className="font-bold text-slate">Applied Date</span>
                     <input
                       type="date"
                       value={form.appliedAt}
                       onChange={(event) => setForm({ ...form, appliedAt: event.target.value })}
-                      className="w-full rounded-lg border border-silverMist bg-cloudPearl px-3 py-2.5 text-sm text-charcoal outline-none transition focus:border-oxblood focus:ring-1 focus:ring-oxblood/20"
+                      className="w-full rounded-lg border border-slate/15 bg-white px-4 py-3 text-sm text-charcoal outline-none transition focus:border-slate focus:ring-2 focus:ring-slate/10 focus:shadow-md-soft"
                     />
                   </label>
                 </div>
@@ -312,7 +320,7 @@ export default function App() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="mt-2 w-full rounded-lg bg-oxblood px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-oxblood/90 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="mt-4 w-full rounded-lg bg-gradient-to-r from-slate to-slate px-4 py-3.5 text-sm font-bold text-white transition hover:shadow-lg-soft shadow-md-soft disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {saving ? "Saving..." : editingId ? "Update Application" : "Add Application"}
                 </button>
@@ -320,74 +328,74 @@ export default function App() {
             </form>
 
             {/* Applications List */}
-            <section className="rounded-xl border border-silverMist bg-white p-6 shadow-sm">
-              <div className="mb-5 flex items-center justify-between">
+            <section className="rounded-lg border border-slate/15 bg-gradient-to-br from-white to-slate/2 p-8 shadow-md-soft">
+              <div className="mb-7 flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg font-semibold text-charcoal">Applications</h2>
-                  <p className="text-sm text-charcoal/50">Most recent updates first</p>
+                  <h2 className="text-xl font-bold text-slate">Your Applications</h2>
+                  <p className="text-sm text-muted mt-1">Most recent updates appear first</p>
                 </div>
                 <button
                   type="button"
                   onClick={loadApplications}
-                  className="rounded-lg border border-charcoal/20 px-3 py-1.5 text-xs font-medium text-charcoal/70 transition hover:bg-silverMist"
+                  className="rounded-lg border border-slate/20 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-muted transition hover:bg-slate/5 hover:text-slate"
                 >
                   Refresh
                 </button>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {loading ? (
-                  <div className="rounded-lg border border-dashed border-silverMist bg-cloudPearl p-8 text-center text-sm text-charcoal/50">
+                  <div className="rounded-lg border border-dashed border-slate/15 bg-gradient-to-br from-slate/2 to-slate/5 p-12 text-center text-sm text-muted">
                     Loading applications...
                   </div>
                 ) : applications.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-silverMist bg-cloudPearl p-8 text-center text-sm text-charcoal/50">
-                    No applications yet. Create your first one above.
+                  <div className="rounded-lg border border-dashed border-slate/15 bg-gradient-to-br from-slate/2 to-slate/5 p-12 text-center text-sm text-muted">
+                    No applications yet. Create your first one to get started.
                   </div>
                 ) : (
                   applications.map((application) => (
                     <article
                       key={application.id}
-                      className="rounded-lg border border-silverMist bg-cloudPearl p-4 transition hover:shadow-md"
+                      className="rounded-lg border border-slate/10 bg-gradient-to-br from-white to-white/50 p-5 transition hover:shadow-md-soft hover:border-slate/20"
                     >
-                      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                         <div className="flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="font-semibold text-charcoal">{application.companyName}</h3>
-                            <span className="rounded-full border border-oxblood/30 bg-oxblood/10 px-2.5 py-0.5 text-xs font-medium text-oxblood">
+                          <div className="flex flex-wrap items-center gap-3">
+                            <h3 className="font-bold text-lg text-slate">{application.companyName}</h3>
+                            <span className="inline-block rounded-full border border-teal/30 bg-gradient-to-r from-teal/10 to-slate/5 px-3 py-1 text-xs font-bold uppercase tracking-wider text-teal">
                               {STATUS_LABELS[application.status]}
                             </span>
                           </div>
-                          <p className="mt-1 text-sm text-charcoal/70">{application.positionTitle}</p>
-                          <div className="mt-2 flex flex-wrap gap-3 text-xs text-charcoal/50">
-                            <span>{application.location || "Location not specified"}</span>
-                            <span>Applied {formatDate(application.appliedAt)}</span>
-                            <span>Updated {formatDate(application.updatedAt)}</span>
+                          <p className="mt-2 text-base font-semibold text-charcoal">{application.positionTitle}</p>
+                          <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted font-medium">
+                            <span>📍 {application.location || "Location not specified"}</span>
+                            <span>📅 Applied {formatDate(application.appliedAt)}</span>
+                            <span>🔄 Updated {formatDate(application.updatedAt)}</span>
                           </div>
                           {application.applicationUrl ? (
                             <a
                               href={application.applicationUrl}
                               target="_blank"
                               rel="noreferrer"
-                              className="mt-2 inline-flex text-xs font-medium text-oxblood underline-offset-2 hover:underline"
+                              className="mt-3 inline-flex gap-1 text-sm font-bold text-teal underline-offset-2 hover:underline"
                             >
-                              View Posting →
+                              Open Job Post →
                             </a>
                           ) : null}
                         </div>
 
-                        <div className="flex gap-2 md:flex-col">
+                        <div className="flex gap-2 md:flex-col md:shrink-0">
                           <button
                             type="button"
                             onClick={() => startEdit(application)}
-                            className="rounded-lg border border-charcoal/20 px-3 py-1.5 text-xs font-medium text-charcoal/70 transition hover:bg-oxblood hover:text-white hover:border-oxblood"
+                            className="rounded-lg border border-slate/20 bg-gradient-to-br from-slate/10 to-slate/5 px-4 py-2 text-xs font-bold uppercase tracking-wider text-slate transition hover:bg-slate hover:text-white hover:border-slate/80 shadow-sm-soft"
                           >
                             Edit
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDelete(application)}
-                            className="rounded-lg border border-red-300 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 transition hover:bg-red-100"
+                            className="rounded-lg border border-red-200 bg-gradient-to-br from-red-50 to-red-50/50 px-4 py-2 text-xs font-bold uppercase tracking-wider text-red-700 transition hover:bg-red-100 shadow-sm-soft"
                           >
                             Delete
                           </button>

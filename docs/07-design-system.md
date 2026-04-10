@@ -1,146 +1,142 @@
 # Design System
 
-The design system for this project follows a **Breathable Luxury** aesthetic—a light, high-contrast design that feels expensive and technical while maintaining clarity and breathing room. This design is perfect for professionals and appeals to technical competence.
+## Overview
+
+The Job Application Tracker uses a **sophisticated, professional design** with a warm cream gradient background and carefully balanced accent colors. The system combines deep slate blues with warm teal accents, creating an inviting yet powerful interface that appeals to technical professionals.
 
 ## Color Palette
 
-The core palette consists of five primary colors:
+| Token | Name | Hex | RGB | Purpose |
+|-------|------|-----|-----|---------|
+| `cream` | Cream | `#FAF9F7` | `250, 249, 247` | Gradient base background (60% of layout) |
+| `slate` | Deep Slate | `#2C3E50` | `44, 62, 80` | Primary text, headers, accents |
+| `teal` | Teal | `#1B8B8B` | `27, 139, 139` | Secondary accent, status, UI highlights |
+| `oxblood` | Burgundy | `#4A0E0E` | `74, 14, 14` | Premium accents, gradients |
+| `gold` | Muted Gold | `#C5A059` | `197, 160, 89` | Reserved for future premium features |
+| `muted` | Muted Gray | `#6B7280` | `107, 114, 128` | Secondary text, descriptions |
+| `charcoal` | Charcoal | `#1A1A1A` | `26, 26, 26` | Body text, high contrast |
 
-### Primary Light Background
+## Background & Gradient
 
-| Token | Name | Hex | RGB | Usage |
-|-------|------|-----|-----|-------|
-| `cloudPearl` | Cloud Pearl | `#F5F5F7` | `245, 245, 247` | Primary canvas (60% of layout), breathing space |
-| `charcoal` | Charcoal | `#2C2C2C` | `44, 44, 44` | Body text, headings, high contrast |
+- **Primary**: Warm cream gradient: `linear-gradient(135deg, #FAF9F7 0%, #FCF9F6 100%)`
+- **Effect**: Creates visual depth while remaining 60% of layout as breathing space
+- **Purpose**: Inviting, professional backdrop that doesn't overwhelm
 
-### Accent Colors
+## Design Principles
 
-| Token | Name | Hex | RGB | Usage |
-|-------|------|-----|-----|-------|
-| `oxblood` | Oxblood Red | `#4A0E0E` | `74, 14, 14` | Header accents, primary buttons, status badges (used sparingly) |
-| `gold` | Muted Gold | `#C5A059` | `197, 160, 89` | Premium callouts, decorative borders, highlights (strict use) |
-| `silverMist` | Silver Mist | `#E2E2E2` | `226, 226, 226` | Card borders, input backgrounds, dividers, UI elements |
-
-### Design Principles
-
-1. **Breathing Space** — Light background with 60% coverage creates openness
-2. **Minimalist Accents** — Oxblood and Gold used only for meaningful interactions
-3. **High Contrast** — Charcoal text on Cloud Pearl ensures accessibility
-4. **Technical Elegance** — Clean lines, subtle shadows suggest precision
-5. **Premium Simplicity** — Every color choice must justify itself
-
-### Tailwind Configuration
-
-The palette is extended in `tailwind.config.js`:
-
-```javascript
-colors: {
-  cloudPearl: "#F5F5F7",
-  charcoal: "#2C2C2C",
-  oxblood: "#4A0E0E",
-  gold: "#C5A059",
-  silverMist: "#E2E2E2",
-}
-```
-
-### CSS Variables
-
-For broader use outside of Tailwind, CSS custom properties are available:
-
-```css
-:root {
-  --cloud-pearl: #F5F5F7;
-  --charcoal: #2C2C2C;
-  --oxblood: #4A0E0E;
-  --gold: #C5A059;
-  --silver-mist: #E2E2E2;
-}
-```
-
-## Semantic Usage
-
-- **Background**: Use `cloudPearl` for primary surfaces and full-screen backgrounds
-- **Text**: Use `charcoal` for all readable text; adjust opacity for hierarchy (`charcoal/70`, `charcoal/50`)
-- **Containers**: Use `white` or `cloudPearl` with `border-silverMist` for cards
-- **Interactive**: Use `oxblood` for buttons and key accents; `gold` strictly for premium callouts
-- **Feedback**: Use red-tinted colors for errors (`red-300`, `red-50`), success states to be added in future phases
+1. **Inviting Yet Professional** — Warm gradient background feels welcoming, not corporate
+2. **High Contrast & Readability** — Slate text on cream ensures accessibility
+3. **Sophisticated Accents** — Teal and slate create depth without visual noise
+4. **Gradient Highlights** — Strategic gradients (slate→oxblood) add premium feel
+5. **Shadow Depth** — Soft shadows (`shadow-md-soft`, `shadow-lg-soft`) create layering
 
 ## Typography
 
-- **Font Family**: System fonts (Segoe UI, Helvetica, Arial, sans-serif)
-- **Base Color**: `charcoal` (`#2C2C2C`)
-- **Base Line Height**: 1.5 (from Tailwind defaults)
+- **H1 (Page Title)**: `text-5xl md:text-6xl font-bold tracking-tight` with gradient color
+- **H2 (Section Header)**: `text-xl font-bold text-slate`
+- **H3 (Subsection)**: `text-sm font-bold text-slate uppercase tracking-wider`
+- **Body**: `text-base text-charcoal` or `text-sm text-charcoal`
+- **Secondary**: `text-sm text-muted font-medium` for descriptions
+- **Labels**: `text-xs font-bold uppercase tracking-widest text-slate/60`
 
 ## Component Patterns
 
-### Buttons
+### Form Elements
 
-- **Primary (CTA)**: `bg-oxblood text-white hover:bg-oxblood/90`
-- **Secondary (Outline)**: `border-charcoal/20 text-charcoal/70 hover:bg-silverMist`
+**Inputs**:
+- Border: `border-slate/15`
+- Background: `bg-white`
+- Focus: `focus:border-slate focus:ring-2 focus:ring-slate/10 focus:shadow-md-soft`
+- Placeholder: `placeholder:text-muted/50`
 
-### Inputs
+**Labels**: `font-bold text-slate` with 12px size
 
-- **Background**: `bg-cloudPearl`
-- **Border**: `border-silverMist`
-- **Focus**: `focus:border-oxblood focus:ring-1 focus:ring-oxblood/20`
-- **Text**: `text-charcoal`
+**Buttons**:
+- Primary: `bg-gradient-to-r from-slate to-slate text-white font-bold`
+- Hover: `hover:shadow-lg-soft`
+- Secondary: `border-slate/20 bg-gradient-to-br from-slate/10 to-slate/5 text-slate`
 
-### Cards
+### Stats Cards
 
-- **Background**: `bg-white` or `bg-cloudPearl`
-- **Border**: `border-silverMist` (or `border-gold/30` for premium callouts)
-- **Hover**: `hover:shadow-md` on interaction
-- **Premium Info Box**: `border-gold/30 bg-white` with gold accent line
+- Background: `bg-gradient-to-br from-white to-slate/5`
+- Border: `border-slate/10`
+- Text Value: Text with gradient `bg-gradient-to-r from-slate to-oxblood bg-clip-text text-transparent`
+- Shadow: `shadow-sm-soft hover:shadow-md-soft`
 
-### Status Badges
+### Info Box
 
-- **Background**: `bg-oxblood/10`
-- **Border**: `border-oxblood/30`
-- **Text**: `text-oxblood` with `font-medium`
+- Background: `bg-gradient-to-br from-white to-teal/5`
+- Border: `border-teal/20`
+- Accent Line: `h-1 w-5 bg-gradient-to-r from-teal to-slate rounded-full`
+- List Items: `h-2 w-2 rounded-full bg-teal` bullets
 
-### Gold Callouts (Premium)
+### Article Cards
 
-- **Accent Line**: `h-0.5 w-4 bg-gold rounded-full`
-- **Label**: `text-sm font-semibold text-gold`
-- **Container**: `bg-white border-gold/30`
+- Background: `bg-gradient-to-br from-white to-white/50`
+- Border: `border-slate/10`, hover: `hover:border-slate/20`
+- Status Badge: `border-teal/30 bg-gradient-to-r from-teal/10 to-slate/5 text-teal`
+- Secondary text: `text-muted`
 
-## Typography Scale
+### Messages
 
-- **H1**: `text-5xl md:text-6xl font-light`
-- **H2**: `text-lg font-semibold`
-- **Body**: `text-base` or `text-sm`
-- **Labels**: `text-sm font-medium` or `text-xs font-semibold uppercase tracking-widest`
-- **Captions**: `text-xs text-charcoal/50`
+**Success**:
+- Background: `bg-gradient-to-r from-teal/10 to-slate/5`
+- Border: `border-teal/30`
+- Text: `text-teal font-medium`
 
-## Layout Structure
+**Error**:
+- Background: `bg-gradient-to-r from-red-50 to-red-50/30`
+- Border: `border-red-200`
+- Text: `text-red-700 font-medium`
 
-- **Container Width**: `max-w-7xl`
+## Spacing & Layout
+
+- **Container**: `max-w-7xl`
 - **Page Padding**: `px-4 py-8 md:px-8`
-- **Grid Gap**: `gap-8` for major sections, `gap-4` for form fields
-- **Border Radius**: `rounded-xl` for cards, `rounded-lg` for buttons/inputs
-- **Responsive**: 2-column layout on desktop (`md:grid-cols-[1fr_1.2fr]`), stacked on mobile
+- **Section Gaps**: `gap-10` for major sections, `gap-5` within forms
+- **Card Padding**: `p-8` for primary containers, `p-5-6` for cards
+- **Border Radius**: `rounded-lg` (8px) for all elements
 
-## Opacity Scale
+## Responsive Grid
 
-For hierarchy and visual distinction:
+- **Desktop**: `md:grid-cols-[0.9fr_1.4fr]` (sidebar + main)
+- **Mobile**: Single column stack
+- **Stats**: `grid-cols-2` on all breakpoints
 
-- `100` - Full opacity (default)
-- `90` - Slightly muted hover states
-- `70` - Secondary text
-- `50` - Tertiary text
-- `40` - Subtle dividers
-- `30` - Light overlays, focus rings
-- `20` - Faint backgrounds
-- `10` - Ghost backgrounds
+## Shadow System
 
-## Color Distribution (60/30/10 Rule)
+- `shadow-sm-soft`: `0 1px 2px rgba(0, 0, 0, 0.05)` — Subtle lift
+- `shadow-md-soft`: `0 4px 6px rgba(0, 0, 0, 0.07)` — Medium depth
+- `shadow-lg-soft`: `0 10px 15px rgba(0, 0, 0, 0.08)` — Strong depth
 
-- **60%** — Cloud Pearl breathing space and structure
-- **30%** — Charcoal text and Silver Mist UI elements  
-- **10%** — Oxblood accents and Gold highlights
+## Color Usage Rules
 
-## Future Considerations
+- Slate dominates text (90% of visible text)
+- Teal used for accents, badges, interactive elements (8%)
+- Oxblood used in gradients and special highlights (2%)
+- Cream/white as background canvas
+- Muted gray for secondary descriptions
 
-- Will add explicit accent colors for success (green), warning (orange), and info (blue) states
-- Animation and transition patterns will be added as the app grows in interactivity
-- Dark mode toggle may be added as a future enhancement
+## CSS Custom Properties
+
+```css
+:root {
+  --cream: #FAF9F7;
+  --card-bg: #FFFFFF;
+  --oxblood: #4A0E0E;
+  --slate: #2C3E50;
+  --teal: #1B8B8B;
+  --gold: #C5A059;
+  --silver-mist: #E8E8E8;
+  --charcoal: #1A1A1A;
+  --muted: #6B7280;
+}
+```
+
+## Future Enhancements
+
+- Advanced theme toggle (dark mode)
+- Animation library for transitions
+- Additional accent colors (green for success, orange for warning)
+- Accessibility ARIA patterns
+- Component library documentation
