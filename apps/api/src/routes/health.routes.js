@@ -6,7 +6,14 @@ const router = Router();
 
 router.get("/health", async (req, res, next) => {
   try {
-    const dbOk = await pingDatabase();
+    let dbOk = false;
+
+    try {
+      dbOk = await pingDatabase();
+    } catch (error) {
+      dbOk = false;
+    }
+
     return sendSuccess(res, {
       service: "job-application-tracker-api",
       status: "ok",

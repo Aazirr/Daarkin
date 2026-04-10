@@ -8,11 +8,11 @@
 - [x] Define shared status enum and base API response contract.
 
 ## Phase 1: Application CRUD
-- Create application form.
-- List applications in table/cards.
-- Edit and delete application.
-- API CRUD endpoints.
-- DB migration for `applications` table.
+- [x] Create application form.
+- [x] List applications in table/cards.
+- [x] Edit and delete application.
+- [x] API CRUD endpoints.
+- [x] DB migration for `applications` table.
 
 ## Phase 2: Status Tracking
 - Status badge UI and status selector.
