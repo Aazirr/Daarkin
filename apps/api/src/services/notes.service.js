@@ -73,8 +73,3 @@ export async function removeNote(noteId, userId) {
   logger.info("Removing note", { noteId, userId });
   return deleteNote(noteId, userId);
 }
-
-export async function removeNote(noteId) {
-  logger.info("Removing note", { noteId });
-  return deleteNote(noteId);
-}
