@@ -529,8 +529,8 @@ a:focus-visible {
 }
 
 .icon-btn {
-  width: 30px;
-  height: 30px;
+  width: 44px;
+  height: 44px;
   border: 1px solid var(--border-default);
   border-radius: var(--radius-sm);
   background: #fff;
@@ -659,6 +659,121 @@ a:focus-visible {
   padding: var(--space-5);
   text-align: center;
   color: var(--text-secondary);
+}
+
+.tour-panel {
+  border-color: #cfd8f2;
+  background: #f6f9ff;
+}
+
+.reminder-panel {
+  border-color: #c7d8d0;
+  background: #f3fbf7;
+}
+
+.settings-panel {
+  border-color: #d4dcef;
+}
+
+.settings-grid {
+  display: grid;
+  gap: 10px;
+  margin-bottom: var(--space-3);
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+}
+
+.toggle-row input {
+  width: 18px;
+  height: 18px;
+}
+
+.reminder-list-panel h2 {
+  margin-top: 0;
+}
+
+.reminder-card {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  padding: 10px 12px;
+}
+
+.reminder-card h3 {
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+}
+
+.reminder-card p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.input-error {
+  border-color: var(--border-error);
+}
+
+.field-error {
+  color: var(--border-error);
+  font-size: 0.78rem;
+}
+
+.skeleton-list {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.skeleton-row {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  display: grid;
+  grid-template-columns: 30px 1fr 72px;
+  gap: var(--space-3);
+  background: var(--surface-raised);
+}
+
+.skeleton-avatar,
+.skeleton-line,
+.skeleton-pill {
+  border-radius: 8px;
+  background: linear-gradient(90deg, #eef2fb, #e2e9f8, #eef2fb);
+  background-size: 180% 100%;
+  animation: inputPulse 1.2s linear infinite;
+}
+
+.skeleton-avatar {
+  width: 30px;
+  height: 30px;
+}
+
+.skeleton-content {
+  display: grid;
+  gap: 8px;
+}
+
+.skeleton-line {
+  height: 12px;
+}
+
+.skeleton-line-lg {
+  width: 62%;
+}
+
+.skeleton-line-sm {
+  width: 42%;
+}
+
+.skeleton-pill {
+  width: 70px;
+  height: 30px;
+  align-self: center;
 }
 
 .first-run-empty h3 {
@@ -846,6 +961,7 @@ a:focus-visible {
   .mobile-bottom-nav .nav-item {
     justify-content: center;
     border: none;
+    min-height: 44px;
   }
 
   .mobile-fab {

@@ -224,6 +224,100 @@ function getLogoUrl(applicationUrl) {
   }
 }
 
+function buildCacheKey(query) {
+  return `applications_cache_v2:${JSON.stringify(query)}`;
+}
+
+function escapeCsvValue(value) {
+  const raw = String(value ?? "");
+  if (/[",\n]/.test(raw)) {
+    return `"${raw.replace(/"/g, '""')}"`;
+  }
+  return raw;
+}
+
+function buildCsv(applications, notesByApp) {
+  const headers = [
+    "id",
+    "companyName",
+    "positionTitle",
+    "status",
+    "location",
+    "applicationUrl",
+    "appliedAt",
+    "createdAt",
+    "updatedAt",
+    "statusChangedAt",
+    "notes",
+  ];
+
+  const rows = applications.map((application) => {
+    const notes = (notesByApp[application.id] || []).map((note) => note.noteText).join(" | ");
+    return [
+      application.id,
+      application.companyName,
+      application.positionTitle,
+      application.status,
+      application.location,
+      application.applicationUrl,
+      application.appliedAt,
+      application.createdAt,
+      application.updatedAt,
+      application.statusChangedAt,
+      notes,
+    ];
+  });
+
+  return [headers, ...rows]
+    .map((row) => row.map((value) => escapeCsvValue(value)).join(","))
+    .join("\n");
+}
+
+function buildReminderCards(applications) {
+  const now = Date.now();
+  const dayMs = 24 * 60 * 60 * 1000;
+  const reminders = [];
+
+  const newestCreatedAt = applications
+    .map((application) => new Date(application.createdAt).getTime())
+    .filter((value) => Number.isFinite(value))
+    .sort((a, b) => b - a)[0];
+
+  if (!newestCreatedAt || now - newestCreatedAt > 7 * dayMs) {
+    reminders.push({
+      id: "inactive-search",
+      title: "Your search has been quiet",
+      body: "No new applications in 7+ days. Consider setting a weekly target.",
+    });
+  }
+
+  const staleInterview = applications.find(
+    (application) => application.status === "interview" && application.updatedAt && now - new Date(application.updatedAt).getTime() > 5 * dayMs
+  );
+
+  if (staleInterview) {
+    reminders.push({
+      id: "interview-stale",
+      title: "Interview follow-up reminder",
+      body: `No update in 5+ days for ${staleInterview.companyName}.`,
+    });
+  }
+
+  const staleOffer = applications.find(
+    (application) => application.status === "offer" && application.updatedAt && now - new Date(application.updatedAt).getTime() > 10 * dayMs
+  );
+
+  if (staleOffer) {
+    reminders.push({
+      id: "offer-stale",
+      title: "Offer decision reminder",
+      body: `${staleOffer.companyName} offer has had no updates for 10+ days.`,
+    });
+  }
+
+  return reminders;
+}
+
 export default function Dashboard() {
   const { user, token, logout } = useAuth();
 
@@ -265,6 +359,37 @@ export default function Dashboard() {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 640);
   const [pipelineExpandedMobile, setPipelineExpandedMobile] = useState(false);
   const [searchHintVisible, setSearchHintVisible] = useState(() => localStorage.getItem("searchHintDismissed") !== "1");
+  const [importFieldErrors, setImportFieldErrors] = useState({});
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [tourStep, setTourStep] = useState(() => {
+    const completed = localStorage.getItem("dashboardTourCompleted") === "1";
+    return completed ? 0 : 1;
+  });
+  const [notificationPrefs, setNotificationPrefs] = useState(() => {
+    const raw = localStorage.getItem("notificationPrefs");
+    if (!raw) {
+      return {
+        pushEnabled: false,
+        emailEnabled: true,
+        noNewApps: true,
+        staleInterview: true,
+        staleOffer: true,
+      };
+    }
+
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return {
+        pushEnabled: false,
+        emailEnabled: true,
+        noNewApps: true,
+        staleInterview: true,
+        staleOffer: true,
+      };
+    }
+  });
+  const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);
 
   const importInputRef = useRef(null);
   const importSectionRef = useRef(null);
@@ -281,6 +406,21 @@ export default function Dashboard() {
   useEffect(() => {
     localStorage.setItem("dashboardViewMode", viewMode);
   }, [viewMode]);
+
+  useEffect(() => {
+    localStorage.setItem("notificationPrefs", JSON.stringify(notificationPrefs));
+  }, [notificationPrefs]);
+
+  useEffect(() => {
+    const promptDismissed = localStorage.getItem("notificationPromptDismissed") === "1";
+    setShowNotificationPrompt(applications.length >= 3 && !notificationPrefs.pushEnabled && !promptDismissed);
+  }, [applications.length, notificationPrefs.pushEnabled]);
+
+  useEffect(() => {
+    if (tourStep === 0) {
+      localStorage.setItem("dashboardTourCompleted", "1");
+    }
+  }, [tourStep]);
 
   useEffect(() => {
     function handleResize() {
@@ -322,20 +462,52 @@ export default function Dashboard() {
     setLoading(true);
     setError("");
 
+    const query = {
+      q: searchText.trim(),
+      status: statusFilter === "all" ? undefined : statusFilter,
+      sortBy,
+      sortOrder,
+      page,
+      pageSize,
+    };
+
+    const cacheKey = buildCacheKey(query);
+    const cached = localStorage.getItem(cacheKey);
+
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed.applications)) {
+          setApplications(parsed.applications);
+          setTotal(parsed.total || 0);
+          setTotalPages(parsed.totalPages || 1);
+          setLoading(false);
+        }
+      } catch {
+        localStorage.removeItem(cacheKey);
+      }
+    }
+
     try {
-      const result = await fetchApplications({
-        q: searchText.trim(),
-        status: statusFilter === "all" ? undefined : statusFilter,
-        sortBy,
-        sortOrder,
-        page,
-        pageSize,
-      });
+      const result = await fetchApplications(query);
 
       const nextApps = result.data?.applications || [];
+      const nextTotal = result.meta?.pagination?.total || 0;
+      const nextTotalPages = result.meta?.pagination?.totalPages || 1;
+
       setApplications(nextApps);
-      setTotal(result.meta?.pagination?.total || 0);
-      setTotalPages(result.meta?.pagination?.totalPages || 1);
+      setTotal(nextTotal);
+      setTotalPages(nextTotalPages);
+
+      localStorage.setItem(
+        cacheKey,
+        JSON.stringify({
+          applications: nextApps,
+          total: nextTotal,
+          totalPages: nextTotalPages,
+          cachedAt: Date.now(),
+        })
+      );
 
       const requestedId = getQueryAppId();
       if (requestedId && nextApps.some((application) => application.id === requestedId)) {
@@ -568,8 +740,53 @@ export default function Dashboard() {
     };
   }, [applications]);
 
+  const reminderCards = useMemo(() => buildReminderCards(applications), [applications]);
+
   function toggleSegmentFilter(status) {
     setStatusFilter((prev) => (prev === status ? "all" : status));
+  }
+
+  function handleNotificationPermission() {
+    setNotificationPrefs((prev) => ({ ...prev, pushEnabled: true }));
+    setShowNotificationPrompt(false);
+    localStorage.setItem("notificationPromptDismissed", "1");
+    setMessage("Push reminders enabled. You can change this anytime in Settings.");
+  }
+
+  function dismissNotificationPrompt() {
+    setShowNotificationPrompt(false);
+    localStorage.setItem("notificationPromptDismissed", "1");
+  }
+
+  function handleCsvExport() {
+    const csv = buildCsv(applications, notesByApp);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `applications-export-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+
+    URL.revokeObjectURL(url);
+    setMessage("CSV export downloaded.");
+  }
+
+  function nextTourStep() {
+    setTourStep((prev) => Math.min(3, prev + 1));
+  }
+
+  function skipTour() {
+    setTourStep(0);
+  }
+
+  function completeTour() {
+    setTourStep(0);
+    setMessage("Tour completed. You're all set.");
+  }
+
+  function toggleReminderPref(key) {
+    setNotificationPrefs((prev) => ({ ...prev, [key]: !prev[key] }));
   }
 
   async function handleImportExtract(event) {
@@ -622,12 +839,18 @@ export default function Dashboard() {
     }
 
     const payload = normalizePayload(importDraft);
+    const nextFieldErrors = {
+      companyName: payload.companyName ? "" : "Company name is required.",
+      positionTitle: payload.positionTitle ? "" : "Position title is required.",
+    };
 
-    if (!payload.companyName || !payload.positionTitle) {
-      setImportError("Company name and position title are required.");
+    if (nextFieldErrors.companyName || nextFieldErrors.positionTitle) {
+      setImportFieldErrors(nextFieldErrors);
+      setImportError("Please fix the highlighted fields.");
       return;
     }
 
+    setImportFieldErrors({});
     setSaving(true);
     setError("");
     setMessage("");
@@ -896,7 +1119,7 @@ export default function Dashboard() {
     return (
       <>
         <div className="panel-header">
-          <h2>{selectedApplication.companyName}</h2>
+          <h2 id="detail-drawer-title">{selectedApplication.companyName}</h2>
           <button type="button" className="btn btn-subtle" onClick={closeDetails}>Close</button>
         </div>
 
@@ -963,7 +1186,14 @@ export default function Dashboard() {
           <button type="button" className="nav-item active" title="Dashboard">▦ {!sidebarCollapsed && <span>Dashboard</span>}</button>
           <button type="button" className="nav-item" title="Board" onClick={() => setViewMode("kanban")}>☰ {!sidebarCollapsed && <span>Board</span>}</button>
           <button type="button" className="nav-item" title="Offers">✦ {!sidebarCollapsed && <span>Offers</span>}</button>
-          <button type="button" className="nav-item" title="Settings">⚙ {!sidebarCollapsed && <span>Settings</span>}</button>
+          <button
+            type="button"
+            className={`nav-item ${settingsOpen ? "active" : ""}`}
+            title="Settings"
+            onClick={() => setSettingsOpen((prev) => !prev)}
+          >
+            ⚙ {!sidebarCollapsed && <span>Settings</span>}
+          </button>
         </nav>
       </aside>
 
@@ -989,6 +1219,34 @@ export default function Dashboard() {
           </div>
         )}
 
+        {tourStep > 0 && (
+          <section className="panel tour-panel" role="dialog" aria-label="Quick app tour">
+            <h2>Quick Tour ({tourStep}/3)</h2>
+            {tourStep === 1 ? <p>Start by pasting a URL into Quick Import to add applications fast.</p> : null}
+            {tourStep === 2 ? <p>Click any status badge to update status instantly from the list.</p> : null}
+            {tourStep === 3 ? <p>The Pipeline Health bar is clickable and filters your list by stage.</p> : null}
+            <div className="row-actions">
+              <button type="button" className="btn btn-subtle" onClick={skipTour}>Skip</button>
+              {tourStep < 3 ? (
+                <button type="button" className="btn btn-primary" onClick={nextTourStep}>Next</button>
+              ) : (
+                <button type="button" className="btn btn-primary" onClick={completeTour}>Finish</button>
+              )}
+            </div>
+          </section>
+        )}
+
+        {showNotificationPrompt && (
+          <section className="panel reminder-panel" role="dialog" aria-label="Notification permission prompt">
+            <h2>Enable reminders?</h2>
+            <p>You have added at least 3 applications. Enable push reminders now or manage this in Settings later.</p>
+            <div className="row-actions">
+              <button type="button" className="btn btn-subtle" onClick={dismissNotificationPrompt}>Not now</button>
+              <button type="button" className="btn btn-primary" onClick={handleNotificationPermission}>Enable push reminders</button>
+            </div>
+          </section>
+        )}
+
         <section className="panel" id="pipeline-health">
           <div className="panel-header">
             <h2>Pipeline Health</h2>
@@ -1011,6 +1269,7 @@ export default function Dashboard() {
                   style={{ width: `${width}%` }}
                   onClick={() => toggleSegmentFilter(status)}
                   title={`${STATUS_LABELS[status]} (${count})`}
+                  aria-label={`${STATUS_LABELS[status]} segment, ${count} applications`}
                 >
                   <span>{STATUS_LABELS[status]} {count}</span>
                 </button>
@@ -1067,18 +1326,28 @@ export default function Dashboard() {
                 <label>
                   Company
                   <input
-                    className="input"
+                    className={`input ${importFieldErrors.companyName ? "input-error" : ""}`}
                     value={importDraft.companyName}
-                    onChange={(event) => setImportDraft({ ...importDraft, companyName: event.target.value })}
+                    onChange={(event) => {
+                      setImportDraft({ ...importDraft, companyName: event.target.value });
+                      setImportFieldErrors((prev) => ({ ...prev, companyName: "" }));
+                    }}
+                    aria-invalid={Boolean(importFieldErrors.companyName)}
                   />
+                  {importFieldErrors.companyName ? <span className="field-error">{importFieldErrors.companyName}</span> : null}
                 </label>
                 <label>
                   Role
                   <input
-                    className="input"
+                    className={`input ${importFieldErrors.positionTitle ? "input-error" : ""}`}
                     value={importDraft.positionTitle}
-                    onChange={(event) => setImportDraft({ ...importDraft, positionTitle: event.target.value })}
+                    onChange={(event) => {
+                      setImportDraft({ ...importDraft, positionTitle: event.target.value });
+                      setImportFieldErrors((prev) => ({ ...prev, positionTitle: "" }));
+                    }}
+                    aria-invalid={Boolean(importFieldErrors.positionTitle)}
                   />
+                  {importFieldErrors.positionTitle ? <span className="field-error">{importFieldErrors.positionTitle}</span> : null}
                 </label>
                 <label>
                   Status
@@ -1131,6 +1400,57 @@ export default function Dashboard() {
           )}
         </section>
 
+        {settingsOpen && (
+          <section className="panel settings-panel" aria-label="Notification and export settings">
+            <div className="panel-header">
+              <h2>Settings</h2>
+              <button type="button" className="btn btn-subtle" onClick={() => setSettingsOpen(false)}>Close</button>
+            </div>
+
+            <div className="settings-grid">
+              <label className="toggle-row">
+                <input type="checkbox" checked={notificationPrefs.pushEnabled} onChange={() => toggleReminderPref("pushEnabled")} />
+                <span>Enable push reminders</span>
+              </label>
+              <label className="toggle-row">
+                <input type="checkbox" checked={notificationPrefs.emailEnabled} onChange={() => toggleReminderPref("emailEnabled")} />
+                <span>Enable reminder emails</span>
+              </label>
+              <label className="toggle-row">
+                <input type="checkbox" checked={notificationPrefs.noNewApps} onChange={() => toggleReminderPref("noNewApps")} />
+                <span>No new applications in 7 days</span>
+              </label>
+              <label className="toggle-row">
+                <input type="checkbox" checked={notificationPrefs.staleInterview} onChange={() => toggleReminderPref("staleInterview")} />
+                <span>Interview stale for 5 days</span>
+              </label>
+              <label className="toggle-row">
+                <input type="checkbox" checked={notificationPrefs.staleOffer} onChange={() => toggleReminderPref("staleOffer")} />
+                <span>Offer stale for 10 days</span>
+              </label>
+            </div>
+
+            <div className="row-actions">
+              <button type="button" className="btn btn-primary" onClick={handleCsvExport}>Export CSV</button>
+            </div>
+            <p className="muted-text">Reminder emails always include one-click unsubscribe link.</p>
+          </section>
+        )}
+
+        {reminderCards.length > 0 && (
+          <section className="panel reminder-list-panel" aria-label="Reminder preview list">
+            <h2>Reminder Preview</h2>
+            <div className="stack-sm">
+              {reminderCards.map((card) => (
+                <article key={card.id} className="reminder-card">
+                  <h3>{card.title}</h3>
+                  <p>{card.body}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
+
         <div className="main-grid">
           <section className="panel">
             <div className="panel-header">
@@ -1173,7 +1493,19 @@ export default function Dashboard() {
             </div>
 
             {loading ? (
-              <div className="empty-state">Loading applications...</div>
+              <div className="skeleton-list" aria-label="Loading applications">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <div key={`skeleton-${index}`} className="skeleton-row">
+                    <div className="skeleton-avatar" />
+                    <div className="skeleton-content">
+                      <div className="skeleton-line skeleton-line-lg" />
+                      <div className="skeleton-line" />
+                      <div className="skeleton-line skeleton-line-sm" />
+                    </div>
+                    <div className="skeleton-pill" />
+                  </div>
+                ))}
+              </div>
             ) : showFirstRunEmpty ? (
               <div className="empty-state first-run-empty">
                 <h3>Paste your first job URL to get started</h3>
@@ -1243,7 +1575,11 @@ export default function Dashboard() {
             </div>
           </section>
 
-          {!isMobile && <aside className="panel detail-drawer">{renderDetailContent()}</aside>}
+          {!isMobile && (
+            <aside className="panel detail-drawer" role="dialog" aria-labelledby="detail-drawer-title">
+              {renderDetailContent()}
+            </aside>
+          )}
         </div>
       </main>
 
@@ -1251,6 +1587,8 @@ export default function Dashboard() {
         <div className="mobile-sheet-scrim" onClick={closeDetails}>
           <div
             className="mobile-sheet"
+            role="dialog"
+            aria-labelledby="detail-drawer-title"
             onClick={(event) => event.stopPropagation()}
             onTouchStart={(event) => {
               touchStartYRef.current = event.changedTouches[0]?.clientY || null;
@@ -1275,7 +1613,7 @@ export default function Dashboard() {
           <button type="button" className="nav-item active">▦</button>
           <button type="button" className="nav-item" onClick={() => setViewMode("kanban")}>☰</button>
           <button type="button" className="nav-item">✦</button>
-          <button type="button" className="nav-item">⚙</button>
+          <button type="button" className="nav-item" onClick={() => setSettingsOpen((prev) => !prev)}>⚙</button>
         </div>
       )}
 

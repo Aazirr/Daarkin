@@ -196,45 +196,45 @@ Acceptance:
 ## P3 - Reliability, trust, and retention
 
 ### 15) Accessibility hardening
-- [ ] Verify WCAG AA contrast for all status + text combinations (light and dark).
-- [ ] Ensure color is never the only status indicator.
-- [ ] Ensure minimum 44x44 touch targets on mobile.
-- [ ] Add alt text for logos/images.
-- [ ] Add aria-label for icon buttons.
-- [ ] Add dialog semantics for detail drawer.
-- [ ] Add accessible label/description for pipeline visualization.
-- [ ] Show field-level validation errors next to inputs.
+- [~] Verify WCAG AA contrast for all status + text combinations (light and dark).
+- [x] Ensure color is never the only status indicator.
+- [x] Ensure minimum 44x44 touch targets on mobile.
+- [x] Add alt text for logos/images.
+- [x] Add aria-label for icon buttons.
+- [x] Add dialog semantics for detail drawer.
+- [x] Add accessible label/description for pipeline visualization.
+- [x] Show field-level validation errors next to inputs.
 
 Acceptance:
 - Accessibility checks pass for keyboard, contrast, and semantics.
 
 ### 16) Performance and perceived speed
 - [ ] Add virtualization for large lists (50+ items).
-- [ ] Add skeleton loaders matching real layout.
-- [ ] Cache latest application list in localStorage.
-- [ ] Render cached data instantly on load, then refresh in background.
+- [x] Add skeleton loaders matching real layout.
+- [x] Cache latest application list in localStorage.
+- [x] Render cached data instantly on load, then refresh in background.
 - [ ] Update only changed rows after fresh fetch.
 
 Acceptance:
 - Return visits feel instant and large lists remain smooth.
 
 ### 17) Notifications and reminders
-- [ ] Add delayed permission prompt only after meaningful usage (e.g., 3 applications).
-- [ ] Implement reminder rules:
-- [ ] No new apps in 7 days.
-- [ ] Interview stale for 5 days.
-- [ ] Offer stale for 10 days.
-- [ ] Add preferences panel in settings.
-- [ ] Ensure one-click unsubscribe in notification emails.
+- [x] Add delayed permission prompt only after meaningful usage (e.g., 3 applications).
+- [x] Implement reminder rules:
+- [x] No new apps in 7 days.
+- [x] Interview stale for 5 days.
+- [x] Offer stale for 10 days.
+- [x] Add preferences panel in settings.
+- [~] Ensure one-click unsubscribe in notification emails.
 
 Acceptance:
 - Reminders are useful, respectful, and configurable.
 
 ### 18) Onboarding and trust features
-- [ ] Build lightweight 3-step tooltip tour (skippable).
-- [ ] Seed one clearly labeled example row for first-time clarity.
+- [x] Build lightweight 3-step tooltip tour (skippable).
+- [x] Seed one clearly labeled example row for first-time clarity.
 - [ ] Add delayed welcome email with deep link to import flow.
-- [ ] Add CSV export in settings for full user data.
+- [x] Add CSV export in settings for full user data.
 
 Acceptance:
 - First-run experience is guided and users trust data portability.
@@ -262,7 +262,7 @@ Acceptance:
 
 ## Definition of Done for Phase 5
 - [ ] New UI uses token system and supports both light/dark themes.
-- [ ] Dashboard supports fast add, fast status change, and split-pane detail workflows.
-- [ ] Pipeline health and search/filter interactions feel immediate.
-- [ ] Mobile, accessibility, and keyboard flows are production-usable.
-- [ ] Perceived performance improvements are measurable and verified.
+- [x] Dashboard supports fast add, fast status change, and split-pane detail workflows.
+- [x] Pipeline health and search-filter interactions feel immediate.
+- [~] Mobile, accessibility, and keyboard flows are production-usable.
+- [~] Perceived performance improvements are measurable and verified.
