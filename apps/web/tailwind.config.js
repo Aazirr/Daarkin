@@ -4,9 +4,10 @@ export default {
   theme: {
     extend: {
       colors: {
-        ink: "#161714",
-        moss: "#406343",
-        oat: "#f7f3e8",
+        blackBean: "#1A0F0F",
+        oxblood: "#4A0E0E",
+        gold: "#C5A059",
+        bone: "#E3DAC9",
       },
     },
   },
