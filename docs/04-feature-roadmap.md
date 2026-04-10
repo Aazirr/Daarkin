@@ -50,3 +50,21 @@
 - Add unit/integration tests (API first).
 - Add basic frontend tests for key flows.
 - Improve error logging and API observability.
+
+## Phase 7: Offer Intelligence
+- Build salary and offer comparison workspace.
+- Add compensation fields (base, bonus, equity, benefits, currency, pay cadence).
+- Add offer scoring model (weighted categories configurable by user).
+- Add side-by-side comparison UI for active offers.
+
+## Phase 8: Job URL Autofill
+- Add paste-url flow in create application form.
+- Parse job posting pages and extract role/company/location/description snippets.
+- Pre-fill form fields with confidence labels and allow user edits.
+- Store source URL and extraction metadata for traceability.
+
+## Phase 9: Inbox Integrations (Gmail/Outlook)
+- OAuth connect flow for Gmail and Microsoft accounts.
+- Sync application-related emails with background fetch.
+- Detect status signals (interview invite, rejection, offer) from message patterns.
+- Create suggested timeline events and status updates for user approval.

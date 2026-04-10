@@ -34,6 +34,17 @@ Provide a simple, focused system that tracks the lifecycle of every job applicat
 - Analytics dashboards beyond basic counts.
 - Social features (no commenting, teams, etc.).
 
+## Post-MVP Innovation Backlog
+1. Salary and offer comparison tool.
+	- Compare base salary, bonus, equity, benefits, and remote/on-site tradeoffs.
+	- Provide normalized annualized estimates and side-by-side scoring.
+2. Job URL autofill.
+	- User pastes a job URL and the app pre-fills company, role, location, and job metadata.
+	- Include confidence indicators and editable fields before save.
+3. Gmail/Outlook inbox integration.
+	- Connect mailbox to detect application-related emails.
+	- Suggest status updates and timeline events from recruiter/company messages.
+
 ## Success Criteria (MVP)
 - User can register or login in under 20 seconds.
 - User can create and update an application in under 30 seconds.
