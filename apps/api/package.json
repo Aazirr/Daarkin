@@ -9,7 +9,8 @@
     "migrate": "node src/scripts/migrate.js",
     "build": "echo \"No build step required for API yet.\"",
     "lint": "echo \"Lint not configured yet.\"",
-    "test": "echo \"API tests not configured yet.\""
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@jat/shared": "file:../../packages/shared",
@@ -22,6 +23,8 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.10",
+    "supertest": "^7.2.2",
+    "vitest": "^2.1.9"
   }
 }

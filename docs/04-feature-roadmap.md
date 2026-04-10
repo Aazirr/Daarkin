@@ -35,32 +35,32 @@
 - [x] Convert AuthContext and hooks to TypeScript.
 - [x] Document authentication architecture.
 
-## Phase 4: Search and Filters
-- Text search (company/role/location/notes).
-- Filter by status.
-- Sort by applied date and updated date.
-- Pagination support if dataset grows.
+## Phase 4: Search and Filters (COMPLETED)
+- [x] Text search (company/role/location/notes).
+- [x] Filter by status.
+- [x] Sort by applied date and updated date.
+- [x] Pagination support if dataset grows.
 
-## Phase 5: Responsive and UX Polish
-- Subphase 5A: High-impact UX foundation
+## Phase 5: Responsive and UX Polish (DELIVERED)
+- [x] Subphase 5A: High-impact UX foundation
 	- Always-visible URL import bar (inline extraction + manual fallback).
 	- Optimistic UI updates with rollback on API failure.
 	- Fast status actions (context menu / badge popover + micro-feedback).
-- Subphase 5B: Core interaction architecture
+- [x] Subphase 5B: Core interaction architecture
 	- Split-pane detail drawer flow (list stays visible, URL deep-link aware).
 	- Pipeline health segmented bar + key metrics + click-to-filter behavior.
 	- Tokenized visual foundation (semantic colors, spacing, motion primitives).
-- Subphase 5C: Information design and navigation
+- [x] Subphase 5C: Information design and navigation
 	- Typography system (display + UI sans + mono roles).
 	- Desktop layout constraints (collapsible sidebar, centered max content width).
 	- List redesign (layered row info, stale-item attention signal, hover actions).
 	- Search polish (hit highlighting, zero-result quick-add, keyboard focus shortcuts).
-- Subphase 5D: Experience polish across devices
+- [x] Subphase 5D: Experience polish across devices
 	- Purposeful micro-interactions and state transitions.
 	- Empty state system (first-run, filtered, and search contexts).
 	- Keyboard navigation model (row traversal, drawer controls, shortcut discoverability).
 	- Mobile UX adaptation (bottom nav, bottom-sheet detail, touch-friendly rows).
-- Subphase 5E: Quality, trust, and retention
+- [x] Subphase 5E: Quality, trust, and retention
 	- Accessibility hardening (contrast, semantics, focus, touch targets, field-level errors).
 	- Performance upgrades (virtualization, skeletons, cache-first render).
 	- Notification/reminder preferences and trigger rules.
@@ -68,10 +68,13 @@
 
 Reference: Detailed checklist in `docs/09-ui-ux-redesignplan.md`.
 
-## Phase 6: Stabilization
-- Add unit/integration tests (API first).
-- Add basic frontend tests for key flows.
-- Improve error logging and API observability.
+## Phase 6: Stabilization (IN PROGRESS)
+- [~] Add unit/integration tests (API first).
+- [~] Add basic frontend tests for key flows.
+- [ ] Improve error logging and API observability.
+- [x] Phase 6 kickoff: baseline API integration test harness added with Vitest + Supertest.
+- [x] Added authenticated application route tests with mocked auth/service boundaries for list/create/update/delete flows.
+- [x] Added frontend test harness (Vitest + Testing Library) and App auth-route baseline tests.
 
 ## Phase 7: Offer Intelligence
 - Build salary and offer comparison workspace.
