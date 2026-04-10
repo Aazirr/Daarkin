@@ -37,7 +37,7 @@ const SORT_OPTIONS = [
   { value: "status", label: "Status" },
 ];
 
-const AVATAR_COLORS = ["#E8F0FF", "#FFF3E4", "#E8F8EF", "#F5EEFF", "#FFF0F4", "#EDF7FA"];
+const AVATAR_COLORS = ["#2A2018", "#2A1C1A", "#1F2520", "#251D23", "#2D1C1E", "#1D2427"];
 
 const DEFAULT_IMPORT_DRAFT = {
   companyName: "",
