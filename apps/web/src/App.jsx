@@ -149,124 +149,146 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blackBean via-blackBean to-oxblood px-4 py-8 text-bone md:px-8">
+    <div className="min-h-screen bg-cloudPearl px-4 py-8 text-charcoal md:px-8">
       <main className="mx-auto max-w-7xl">
-        <section className="rounded-[2rem] border border-oxblood/30 bg-oxblood/40 shadow-[0_24px_80px_rgba(0,0,0,0.4)] backdrop-blur">
-          <div className="grid gap-8 p-6 md:grid-cols-[1.05fr_1.4fr] md:p-10">
-            <div className="space-y-6">
-              <header className="space-y-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-gold">Phase 1</p>
-                <h1 className="max-w-md text-4xl font-semibold leading-tight md:text-5xl">
-                  Track every job application without losing the thread.
-                </h1>
-                <p className="max-w-xl text-sm leading-6 text-bone/70 md:text-base">
-                  Add roles, update status, edit details, and remove old entries from one focused workspace.
-                </p>
-              </header>
+        {/* Header */}
+        <header className="mb-10 space-y-3 border-b border-silverMist pb-8">
+          <div className="flex items-center gap-3">
+            <div className="h-1 w-8 bg-oxblood rounded-full"></div>
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-oxblood">Job Tracker</p>
+          </div>
+          <h1 className="text-5xl font-light tracking-tight text-charcoal md:text-6xl">
+            Track Every Opportunity
+          </h1>
+          <p className="max-w-2xl text-base leading-relaxed text-charcoal/70">
+            Manage your job applications with a clean, professional interface. Add roles, track progress, and never lose sight of an opportunity.
+          </p>
+        </header>
 
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {Object.entries(summary).map(([status, count]) => (
-                  <div key={status} className="rounded-2xl border border-gold/20 bg-blackBean/60 p-4">
-                    <div className="text-xs uppercase tracking-[0.2em] text-bone/50">{STATUS_LABELS[status]}</div>
-                    <div className="mt-2 text-2xl font-semibold">{count}</div>
+        <div className="grid gap-8 md:grid-cols-[1fr_1.2fr]">
+          {/* Left: Summary Stats and Info */}
+          <div className="space-y-6">
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 gap-4">
+              {Object.entries(summary).map(([status, count]) => (
+                <div key={status} className="rounded-xl border border-silverMist bg-white p-4 shadow-sm">
+                  <div className="text-xs font-medium uppercase tracking-widest text-charcoal/50">
+                    {STATUS_LABELS[status]}
                   </div>
-                ))}
-              </div>
-
-              <div className="rounded-2xl border border-gold/20 bg-gold/10 p-4 text-sm text-bone/80">
-                <div className="font-semibold text-gold">What is wired now</div>
-                <ul className="mt-2 space-y-1">
-                  <li>Application CRUD API with PostgreSQL-backed persistence</li>
-                  <li>Responsive editor form</li>
-                  <li>List cards with edit and delete actions</li>
-                  <li>Vite proxy for local API calls and relative routes for Vercel</li>
-                </ul>
-              </div>
-
-              {message ? (
-                <div className="rounded-2xl border border-gold/30 bg-gold/15 px-4 py-3 text-sm text-gold">
-                  {message}
+                  <div className="mt-3 text-3xl font-light text-oxblood">{count}</div>
                 </div>
-              ) : null}
-
-              {error ? (
-                <div className="rounded-2xl border border-red-600/40 bg-red-900/30 px-4 py-3 text-sm text-red-300">
-                  {error}
-                </div>
-              ) : null}
+              ))}
             </div>
 
-            <div className="grid gap-6">
-              <form
-                onSubmit={handleSubmit}
-                className="rounded-[1.75rem] border border-oxblood/30 bg-oxblood/50 p-5 md:p-6"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <h2 className="text-xl font-semibold">{editingId ? "Edit application" : "New application"}</h2>
-                    <p className="text-sm text-bone/60">Keep the core details in one place.</p>
-                  </div>
-                  {editingId ? (
-                    <button
-                      type="button"
-                      onClick={resetForm}
-                      className="rounded-full border border-gold/40 px-4 py-2 text-sm font-medium text-gold transition hover:bg-gold/20"
-                    >
-                      Cancel
-                    </button>
-                  ) : null}
-                </div>
+            {/* Info Box */}
+            <div className="rounded-xl border border-gold/30 bg-white p-6 shadow-sm">
+              <div className="mb-3 flex items-center gap-2">
+                <div className="h-0.5 w-4 bg-gold rounded-full"></div>
+                <h3 className="text-sm font-semibold text-gold">Premium Features</h3>
+              </div>
+              <ul className="space-y-2 text-sm text-charcoal/70">
+                <li className="flex items-start gap-2">
+                  <span className="mt-1 h-1 w-1 rounded-full bg-gold flex-shrink-0" />
+                  <span>Full CRUD application management</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-1 h-1 w-1 rounded-full bg-gold flex-shrink-0" />
+                  <span>Status tracking with timeline</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-1 h-1 w-1 rounded-full bg-gold flex-shrink-0" />
+                  <span>PostgreSQL-backed persistence</span>
+                </li>
+              </ul>
+            </div>
 
-                <div className="mt-5 grid gap-4 md:grid-cols-2">
-                  <label className="space-y-2 text-sm font-medium">
-                    Company name
+            {/* Messages */}
+            {message ? (
+              <div className="rounded-xl border border-oxblood/20 bg-oxblood/5 px-4 py-3 text-sm text-oxblood">
+                ✓ {message}
+              </div>
+            ) : null}
+
+            {error ? (
+              <div className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
+                ✖ {error}
+              </div>
+            ) : null}
+          </div>
+
+          {/* Right: Form and List */}
+          <div className="space-y-6">
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="rounded-xl border border-silverMist bg-white p-6 shadow-sm">
+              <div className="mb-5 flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-charcoal">
+                    {editingId ? "Edit Application" : "Add Application"}
+                  </h2>
+                  <p className="text-sm text-charcoal/50">Save your opportunity details</p>
+                </div>
+                {editingId ? (
+                  <button
+                    type="button"
+                    onClick={resetForm}
+                    className="rounded-lg border border-charcoal/20 px-3 py-1.5 text-xs font-medium text-charcoal/70 transition hover:bg-silverMist"
+                  >
+                    Cancel
+                  </button>
+                ) : null}
+              </div>
+
+              <div className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <label className="space-y-1.5 text-sm font-medium text-charcoal">
+                    Company Name
                     <input
                       required
                       value={form.companyName}
                       onChange={(event) => setForm({ ...form, companyName: event.target.value })}
-                      className="w-full rounded-2xl border border-gold/20 bg-blackBean px-4 py-3 text-bone outline-none transition focus:border-gold/60 focus:ring-1 focus:ring-gold/30"
+                      className="w-full rounded-lg border border-silverMist bg-cloudPearl px-3 py-2.5 text-sm text-charcoal outline-none transition focus:border-oxblood focus:ring-1 focus:ring-oxblood/20"
                       placeholder="Acme Corp"
                     />
                   </label>
 
-                  <label className="space-y-2 text-sm font-medium">
-                    Position title
+                  <label className="space-y-1.5 text-sm font-medium text-charcoal">
+                    Position Title
                     <input
                       required
                       value={form.positionTitle}
                       onChange={(event) => setForm({ ...form, positionTitle: event.target.value })}
-                      className="w-full rounded-2xl border border-gold/20 bg-blackBean px-4 py-3 text-bone outline-none transition focus:border-gold/60 focus:ring-1 focus:ring-gold/30"
+                      className="w-full rounded-lg border border-silverMist bg-cloudPearl px-3 py-2.5 text-sm text-charcoal outline-none transition focus:border-oxblood focus:ring-1 focus:ring-oxblood/20"
                       placeholder="Frontend Developer"
                     />
                   </label>
 
-                  <label className="space-y-2 text-sm font-medium">
+                  <label className="space-y-1.5 text-sm font-medium text-charcoal">
                     Location
                     <input
                       value={form.location}
                       onChange={(event) => setForm({ ...form, location: event.target.value })}
-                      className="w-full rounded-2xl border border-gold/20 bg-blackBean px-4 py-3 text-bone outline-none transition focus:border-gold/60 focus:ring-1 focus:ring-gold/30"
+                      className="w-full rounded-lg border border-silverMist bg-cloudPearl px-3 py-2.5 text-sm text-charcoal outline-none transition focus:border-oxblood focus:ring-1 focus:ring-oxblood/20"
                       placeholder="Remote"
                     />
                   </label>
 
-                  <label className="space-y-2 text-sm font-medium">
+                  <label className="space-y-1.5 text-sm font-medium text-charcoal">
                     Application URL
                     <input
                       type="url"
                       value={form.applicationUrl}
                       onChange={(event) => setForm({ ...form, applicationUrl: event.target.value })}
-                      className="w-full rounded-2xl border border-gold/20 bg-blackBean px-4 py-3 text-bone outline-none transition focus:border-gold/60 focus:ring-1 focus:ring-gold/30"
+                      className="w-full rounded-lg border border-silverMist bg-cloudPearl px-3 py-2.5 text-sm text-charcoal outline-none transition focus:border-oxblood focus:ring-1 focus:ring-oxblood/20"
                       placeholder="https://jobs.example.com/123"
                     />
                   </label>
 
-                  <label className="space-y-2 text-sm font-medium">
+                  <label className="space-y-1.5 text-sm font-medium text-charcoal">
                     Status
                     <select
                       value={form.status}
                       onChange={(event) => setForm({ ...form, status: event.target.value })}
-                      className="w-full rounded-2xl border border-gold/20 bg-blackBean px-4 py-3 text-bone outline-none transition focus:border-gold/60 focus:ring-1 focus:ring-gold/30"
+                      className="w-full rounded-lg border border-silverMist bg-cloudPearl px-3 py-2.5 text-sm text-charcoal outline-none transition focus:border-oxblood focus:ring-1 focus:ring-oxblood/20"
                     >
                       {APPLICATION_STATUSES.map((status) => (
                         <option key={status} value={status}>
@@ -276,13 +298,13 @@ export default function App() {
                     </select>
                   </label>
 
-                  <label className="space-y-2 text-sm font-medium">
-                    Applied date
+                  <label className="space-y-1.5 text-sm font-medium text-charcoal">
+                    Applied Date
                     <input
                       type="date"
                       value={form.appliedAt}
                       onChange={(event) => setForm({ ...form, appliedAt: event.target.value })}
-                      className="w-full rounded-2xl border border-gold/20 bg-blackBean px-4 py-3 text-bone outline-none transition focus:border-gold/60 focus:ring-1 focus:ring-gold/30"
+                      className="w-full rounded-lg border border-silverMist bg-cloudPearl px-3 py-2.5 text-sm text-charcoal outline-none transition focus:border-oxblood focus:ring-1 focus:ring-oxblood/20"
                     />
                   </label>
                 </div>
@@ -290,93 +312,94 @@ export default function App() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="mt-5 inline-flex rounded-full bg-gold px-5 py-3 text-sm font-semibold text-blackBean transition hover:bg-gold/90 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="mt-2 w-full rounded-lg bg-oxblood px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-oxblood/90 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {saving ? "Saving..." : editingId ? "Update application" : "Add application"}
+                  {saving ? "Saving..." : editingId ? "Update Application" : "Add Application"}
                 </button>
-              </form>
+              </div>
+            </form>
 
-              <section className="rounded-[1.75rem] border border-oxblood/30 bg-oxblood/40 p-5 md:p-6">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <h2 className="text-xl font-semibold">Applications</h2>
-                    <p className="text-sm text-bone/60">Most recent updates appear first.</p>
+            {/* Applications List */}
+            <section className="rounded-xl border border-silverMist bg-white p-6 shadow-sm">
+              <div className="mb-5 flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-charcoal">Applications</h2>
+                  <p className="text-sm text-charcoal/50">Most recent updates first</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={loadApplications}
+                  className="rounded-lg border border-charcoal/20 px-3 py-1.5 text-xs font-medium text-charcoal/70 transition hover:bg-silverMist"
+                >
+                  Refresh
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {loading ? (
+                  <div className="rounded-lg border border-dashed border-silverMist bg-cloudPearl p-8 text-center text-sm text-charcoal/50">
+                    Loading applications...
                   </div>
-                  <button
-                    type="button"
-                    onClick={loadApplications}
-                    className="rounded-full border border-gold/40 px-4 py-2 text-sm font-medium text-gold transition hover:bg-gold/20"
-                  >
-                    Refresh
-                  </button>
-                </div>
-
-                <div className="mt-5 space-y-3">
-                  {loading ? (
-                    <div className="rounded-2xl border border-dashed border-gold/30 bg-blackBean/60 p-6 text-sm text-bone/60">
-                      Loading applications...
-                    </div>
-                  ) : applications.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-gold/30 bg-blackBean/60 p-6 text-sm text-bone/60">
-                      No applications yet. Create the first one using the form.
-                    </div>
-                  ) : (
-                    applications.map((application) => (
-                      <article
-                        key={application.id}
-                        className="rounded-2xl border border-oxblood/40 bg-oxblood/30 p-4 transition hover:-translate-y-0.5 hover:border-gold/40 hover:shadow-lg hover:shadow-gold/10"
-                      >
-                        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                          <div className="space-y-2">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <h3 className="text-lg font-semibold">{application.companyName}</h3>
-                              <span className="rounded-full border border-gold/30 bg-gold/20 px-3 py-1 text-xs font-medium text-gold">
-                                {STATUS_LABELS[application.status]}
-                              </span>
-                            </div>
-                            <p className="text-sm text-bone/70">{application.positionTitle}</p>
-                            <div className="flex flex-wrap gap-3 text-xs text-bone/50">
-                              <span>{application.location || "Location not set"}</span>
-                              <span>Applied {formatDate(application.appliedAt)}</span>
-                              <span>Updated {formatDate(application.updatedAt)}</span>
-                            </div>
-                            {application.applicationUrl ? (
-                              <a
-                                href={application.applicationUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inline-flex text-sm font-medium text-gold underline-offset-4 hover:underline"
-                              >
-                                Open application
-                              </a>
-                            ) : null}
+                ) : applications.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-silverMist bg-cloudPearl p-8 text-center text-sm text-charcoal/50">
+                    No applications yet. Create your first one above.
+                  </div>
+                ) : (
+                  applications.map((application) => (
+                    <article
+                      key={application.id}
+                      className="rounded-lg border border-silverMist bg-cloudPearl p-4 transition hover:shadow-md"
+                    >
+                      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                        <div className="flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="font-semibold text-charcoal">{application.companyName}</h3>
+                            <span className="rounded-full border border-oxblood/30 bg-oxblood/10 px-2.5 py-0.5 text-xs font-medium text-oxblood">
+                              {STATUS_LABELS[application.status]}
+                            </span>
                           </div>
-
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              onClick={() => startEdit(application)}
-                              className="rounded-full border border-gold/40 bg-gold/10 px-4 py-2 text-sm font-medium text-gold transition hover:bg-gold/30"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDelete(application)}
-                              className="rounded-full border border-red-600/40 bg-red-900/30 px-4 py-2 text-sm font-medium text-red-300 transition hover:bg-red-900/50"
-                            >
-                              Delete
-                            </button>
+                          <p className="mt-1 text-sm text-charcoal/70">{application.positionTitle}</p>
+                          <div className="mt-2 flex flex-wrap gap-3 text-xs text-charcoal/50">
+                            <span>{application.location || "Location not specified"}</span>
+                            <span>Applied {formatDate(application.appliedAt)}</span>
+                            <span>Updated {formatDate(application.updatedAt)}</span>
                           </div>
+                          {application.applicationUrl ? (
+                            <a
+                              href={application.applicationUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="mt-2 inline-flex text-xs font-medium text-oxblood underline-offset-2 hover:underline"
+                            >
+                              View Posting →
+                            </a>
+                          ) : null}
                         </div>
-                      </article>
-                    ))
-                  )}
-                </div>
-              </section>
-            </div>
+
+                        <div className="flex gap-2 md:flex-col">
+                          <button
+                            type="button"
+                            onClick={() => startEdit(application)}
+                            className="rounded-lg border border-charcoal/20 px-3 py-1.5 text-xs font-medium text-charcoal/70 transition hover:bg-oxblood hover:text-white hover:border-oxblood"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(application)}
+                            className="rounded-lg border border-red-300 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 transition hover:bg-red-100"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    </article>
+                  ))
+                )}
+              </div>
+            </section>
           </div>
-        </section>
+        </div>
       </main>
     </div>
   );
