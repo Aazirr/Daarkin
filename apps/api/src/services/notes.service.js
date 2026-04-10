@@ -47,26 +47,31 @@ export function validateUpdatePayload(body) {
   return noteUpdateSchema.safeParse(body);
 }
 
-export async function getNotes(applicationId) {
-  logger.info("Getting notes for application", { applicationId });
-  return listNotesByApplicationId(applicationId);
+export async function getNotes(applicationId, userId) {
+  logger.info("Getting notes for application", { applicationId, userId });
+  return listNotesByApplicationId(applicationId, userId);
 }
 
-export async function getNote(noteId) {
-  logger.info("Getting note", { noteId });
-  return getNoteById(noteId);
+export async function getNote(noteId, userId) {
+  logger.info("Getting note", { noteId, userId });
+  return getNoteById(noteId, userId);
 }
 
-export async function createNewNote(applicationId, body) {
-  logger.info("Creating new note", { applicationId });
+export async function createNewNote(applicationId, userId, body) {
+  logger.info("Creating new note", { applicationId, userId });
   const normalized = normalizeCreatePayload(body);
-  return createNote(applicationId, normalized.noteText);
+  return createNote(applicationId, userId, normalized.noteText);
 }
 
-export async function updateExistingNote(noteId, body) {
-  logger.info("Updating note", { noteId });
+export async function updateExistingNote(noteId, userId, body) {
+  logger.info("Updating note", { noteId, userId });
   const normalized = normalizeUpdatePayload(body);
-  return updateNote(noteId, normalized.noteText);
+  return updateNote(noteId, userId, normalized.noteText);
+}
+
+export async function removeNote(noteId, userId) {
+  logger.info("Removing note", { noteId, userId });
+  return deleteNote(noteId, userId);
 }
 
 export async function removeNote(noteId) {

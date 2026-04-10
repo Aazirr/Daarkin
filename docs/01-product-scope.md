@@ -23,15 +23,28 @@ Provide a simple, focused system that tracks the lifecycle of every job applicat
 4. Search by text (company, role, location, notes).
 5. Filter by status and date.
 6. Responsive web UI.
+7. User authentication (register, login, logout).
+8. Per-user data isolation (users only see their own applications).
 
 ## Out of Scope for MVP
-- Multi-user collaboration.
+- Multi-user collaboration/sharing (each user has isolated data).
 - Resume/cover letter storage.
 - Email integration.
 - Browser extension autofill.
 - Analytics dashboards beyond basic counts.
+- Social features (no commenting, teams, etc.).
 
 ## Success Criteria (MVP)
+- User can register or login in under 20 seconds.
 - User can create and update an application in under 30 seconds.
 - User can find any application by keyword or status filter in under 5 seconds.
 - UI works across mobile and desktop with no critical layout breaks.
+- Each user's data is completely isolated (cannot see other users' applications).
+
+## Authentication Approach
+- Email + password registration.
+- JWT-based session tokens stored in localStorage.
+- Tokens sent in Authorization header for all API requests.
+- Server validates tokens and enforces user-scoped queries.
+- Landing page doubles as login/register portal.
+- App redirects unauthenticated users to landing page.

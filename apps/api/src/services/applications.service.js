@@ -85,30 +85,31 @@ export function validateUpdatePayload(body) {
   return applicationUpdateSchema.safeParse(body);
 }
 
-export async function getApplications() {
-  logger.info("Loading applications from repository");
-  return listApplications();
+export async function getApplications(userId) {
+  logger.info("Loading applications from repository", { userId });
+  return listApplications(userId);
 }
 
-export async function getApplication(id) {
-  logger.info("Loading application from repository", { id });
-  return getApplicationById(id);
+export async function getApplication(id, userId) {
+  logger.info("Loading application from repository", { id, userId });
+  return getApplicationById(id, userId);
 }
 
-export async function createNewApplication(body) {
+export async function createNewApplication(userId, body) {
   logger.info("Normalizing create payload", {
+    userId,
     companyName: body.companyName,
     positionTitle: body.positionTitle,
   });
-  return createApplication(normalizeCreatePayload(body));
+  return createApplication(userId, normalizeCreatePayload(body));
 }
 
-export async function updateExistingApplication(id, body) {
-  logger.info("Normalizing update payload", { id, fields: Object.keys(body) });
-  return updateApplication(id, normalizeUpdatePayload(body));
+export async function updateExistingApplication(id, userId, body) {
+  logger.info("Normalizing update payload", { id, userId, fields: Object.keys(body) });
+  return updateApplication(id, userId, normalizeUpdatePayload(body));
 }
 
-export async function removeApplication(id) {
-  logger.info("Removing application from repository", { id });
-  return deleteApplication(id);
+export async function removeApplication(id, userId) {
+  logger.info("Removing application from repository", { id, userId });
+  return deleteApplication(id, userId);
 }

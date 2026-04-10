@@ -4,6 +4,7 @@ import applicationsRoutes from "./routes/applications.routes.js";
 import healthRoutes from "./routes/health.routes.js";
 import metaRoutes from "./routes/meta.routes.js";
 import notesRoutes from "./routes/notes.routes.js";
+import authRoutes from "./routes/auth.routes.js";
 import { errorHandler } from "./middlewares/error-handler.js";
 import { createLogger } from "./utils/logger.js";
 
@@ -27,6 +28,9 @@ app.use((req, res, next) => {
 
 app.use("/api", healthRoutes);
 app.use("/api", metaRoutes);
+// Auth routes (public - no auth middleware)
+app.use("/api", authRoutes);
+// Protected routes (require auth middleware)
 app.use("/api", applicationsRoutes);
 app.use("/api", notesRoutes);
 

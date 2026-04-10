@@ -1,5 +1,11 @@
 const API_BASE = "/api";
 
+let authToken = null;
+
+export function setAuthToken(token) {
+  authToken = token;
+}
+
 function log(action, details) {
   const suffix = details ? ` ${JSON.stringify(details)}` : "";
   console.info(`[web:notes-api] ${action}${suffix}`);
@@ -7,11 +13,19 @@ function log(action, details) {
 
 async function request(path, options = {}) {
   log("request-start", { path, method: options.method || "GET" });
+  
+  const headers = {
+    "Content-Type": "application/json",
+    ...(options.headers || {}),
+  };
+
+  // Add auth token if available
+  if (authToken) {
+    headers.Authorization = `Bearer ${authToken}`;
+  }
+
   const response = await fetch(`${API_BASE}${path}`, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {}),
-    },
+    headers,
     ...options,
   });
 

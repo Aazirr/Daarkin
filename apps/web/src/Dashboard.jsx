@@ -1,64 +1,29 @@
 import { useEffect, useMemo, useState } from "react";
 import { APPLICATION_STATUSES } from "@jat/shared";
+import { useAuth } from "./hooks/useAuth.js";
 import {
   createApplication,
   deleteApplication,
   fetchApplications,
   updateApplication,
-} from "./services/applications-api";
+  setAuthToken as setAppAuthToken,
+} from "./services/applications-api.js";
 import {
   createNote,
   deleteNote,
   fetchNotes,
   updateNote,
-} from "./services/notes-api";
+  setAuthToken as setNotesAuthToken,
+} from "./services/notes-api.js";
 
-// Type Definitions
-export interface Application {
-  id: string;
-  companyName: string;
-  positionTitle: string;
-  location: string;
-  applicationUrl: string;
-  status: "applied" | "interview" | "offer" | "rejected";
-  appliedAt: string;
-  statusChangedAt: string;
-  updatedAt: string;
-}
-
-export interface Note {
-  id: string;
-  applicationId: string;
-  noteText: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface ApplicationForm {
-  companyName: string;
-  positionTitle: string;
-  location: string;
-  applicationUrl: string;
-  status: "applied" | "interview" | "offer" | "rejected";
-  appliedAt: string;
-}
-
-export interface StatusSummary {
-  applied: number;
-  interview: number;
-  offer: number;
-  rejected: number;
-}
-
-// Constants
-const STATUS_LABELS: Record<string, string> = {
+const STATUS_LABELS = {
   applied: "Applied",
   interview: "Interview",
   offer: "Offer",
   rejected: "Rejected",
 };
 
-const DEFAULT_FORM: ApplicationForm = {
+const DEFAULT_FORM = {
   companyName: "",
   positionTitle: "",
   location: "",
@@ -73,8 +38,7 @@ const dateFormatter = new Intl.DateTimeFormat("en", {
   year: "numeric",
 });
 
-// Utility Functions
-function formatDate(value: string | null | undefined): string {
+function formatDate(value) {
   if (!value) {
     return "Not set";
   }
@@ -82,7 +46,7 @@ function formatDate(value: string | null | undefined): string {
   return dateFormatter.format(new Date(value));
 }
 
-function cleanPayload(form: ApplicationForm): ApplicationForm {
+function cleanPayload(form) {
   return {
     companyName: form.companyName.trim(),
     positionTitle: form.positionTitle.trim(),
@@ -93,36 +57,44 @@ function cleanPayload(form: ApplicationForm): ApplicationForm {
   };
 }
 
-// Main App Component
-export default function App(): JSX.Element {
-  // Application state
-  const [applications, setApplications] = useState<Application[]>([]);
-  const [form, setForm] = useState<ApplicationForm>(DEFAULT_FORM);
-  const [editingId, setEditingId] = useState<string | null>(null);
+export default function Dashboard() {
+  const { user, token, logout } = useAuth();
+  
+  const [applications, setApplications] = useState([]);
+  const [form, setForm] = useState(DEFAULT_FORM);
+  const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   
   // Notes state
-  const [expandedNotesId, setExpandedNotesId] = useState<string | null>(null);
-  const [notes, setNotes] = useState<Record<string, Note[]>>({});
+  const [expandedNotesId, setExpandedNotesId] = useState(null);
+  const [notes, setNotes] = useState({});
   const [loadingNotes, setLoadingNotes] = useState(false);
   const [newNoteText, setNewNoteText] = useState("");
   const [savingNote, setSavingNote] = useState(false);
 
-  async function loadApplications(): Promise<void> {
+  // Set auth token in API services when token changes
+  useEffect(() => {
+    if (token) {
+      setAppAuthToken(token);
+      setNotesAuthToken(token);
+    }
+  }, [token]);
+
+  async function loadApplications() {
     setLoading(true);
     setError("");
-    console.info("[web:app] load-applications-start");
+    console.info("[web:dashboard] load-applications-start");
 
     try {
       const data = await fetchApplications();
       setApplications(data.applications || []);
-      console.info("[web:app] load-applications-success", { count: data.applications?.length || 0 });
+      console.info("[web:dashboard] load-applications-success", { count: data.applications?.length || 0 });
     } catch (loadError) {
-      console.error("[web:app] load-applications-failed", loadError);
-      setError(loadError instanceof Error ? loadError.message : "Failed to load applications");
+      console.error("[web:dashboard] load-applications-failed", loadError);
+      setError(loadError.message);
     } finally {
       setLoading(false);
     }
@@ -132,104 +104,23 @@ export default function App(): JSX.Element {
     loadApplications();
   }, []);
 
-  async function loadNotesForApplication(applicationId: string): Promise<void> {
-    setLoadingNotes(true);
-    console.info("[web:app] load-notes-start", { applicationId });
-
-    try {
-      const data = await fetchNotes(applicationId);
-      setNotes((prev) => ({
-        ...prev,
-        [applicationId]: data.notes || [],
-      }));
-      console.info("[web:app] load-notes-success", { applicationId, count: data.notes?.length || 0 });
-    } catch (loadError) {
-      console.error("[web:app] load-notes-failed", loadError);
-      setError(loadError instanceof Error ? loadError.message : "Failed to load notes");
-    } finally {
-      setLoadingNotes(false);
-    }
-  }
-
-  async function handleAddNote(applicationId: string): Promise<void> {
-    if (!newNoteText.trim()) {
-      setError("Please enter a note before saving.");
-      return;
-    }
-
-    setSavingNote(true);
-    setError("");
-    setMessage("");
-    console.info("[web:app] create-note-start", { applicationId, textLength: newNoteText.length });
-
-    try {
-      await createNote(applicationId, { noteText: newNoteText });
-      setNewNoteText("");
-      await loadNotesForApplication(applicationId);
-      setMessage("Note added successfully.");
-      console.info("[web:app] create-note-success", { applicationId });
-    } catch (createError) {
-      console.error("[web:app] create-note-failed", createError);
-      setError(createError instanceof Error ? createError.message : "Failed to create note");
-    } finally {
-      setSavingNote(false);
-    }
-  }
-
-  async function handleDeleteNote(applicationId: string, noteId: string): Promise<void> {
-    const confirmed = window.confirm("Delete this note?");
-
-    if (!confirmed) {
-      console.info("[web:app] delete-note-cancelled", { noteId });
-      return;
-    }
-
-    setSavingNote(true);
-    setError("");
-    setMessage("");
-    console.info("[web:app] delete-note-start", { noteId, applicationId });
-
-    try {
-      await deleteNote(noteId);
-      await loadNotesForApplication(applicationId);
-      setMessage("Note deleted successfully.");
-      console.info("[web:app] delete-note-success", { noteId });
-    } catch (deleteError) {
-      console.error("[web:app] delete-note-failed", deleteError);
-      setError(deleteError instanceof Error ? deleteError.message : "Failed to delete note");
-    } finally {
-      setSavingNote(false);
-    }
-  }
-
-  function toggleNotesExpanded(applicationId: string): void {
-    if (expandedNotesId === applicationId) {
-      setExpandedNotesId(null);
-    } else {
-      setExpandedNotesId(applicationId);
-      if (!notes[applicationId]) {
-        loadNotesForApplication(applicationId);
-      }
-    }
-  }
-
-  const summary = useMemo<StatusSummary>(() => {
-    return APPLICATION_STATUSES.reduce<StatusSummary>(
+  const summary = useMemo(() => {
+    return APPLICATION_STATUSES.reduce(
       (accumulator, status) => {
-        accumulator[status as keyof StatusSummary] = applications.filter((application) => application.status === status).length;
+        accumulator[status] = applications.filter((application) => application.status === status).length;
         return accumulator;
       },
       { applied: 0, interview: 0, offer: 0, rejected: 0 }
     );
   }, [applications]);
 
-  function resetForm(): void {
+  function resetForm() {
     setForm(DEFAULT_FORM);
     setEditingId(null);
   }
 
-  function startEdit(application: Application): void {
-    console.info("[web:app] start-edit", { id: application.id, companyName: application.companyName });
+  function startEdit(application) {
+    console.info("[web:dashboard] start-edit", { id: application.id, companyName: application.companyName });
     setEditingId(application.id);
     setForm({
       companyName: application.companyName || "",
@@ -242,12 +133,12 @@ export default function App(): JSX.Element {
     setMessage(`Editing ${application.companyName}.`);
   }
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
+  async function handleSubmit(event) {
     event.preventDefault();
     setSaving(true);
     setError("");
     setMessage("");
-    console.info("[web:app] submit-start", { editingId: editingId || null });
+    console.info("[web:dashboard] submit-start", { editingId: editingId || null });
 
     try {
       const payload = cleanPayload(form);
@@ -255,28 +146,28 @@ export default function App(): JSX.Element {
       await request;
       await loadApplications();
       setMessage(editingId ? "Application updated." : "Application created.");
-      console.info("[web:app] submit-success", { action: editingId ? "update" : "create" });
+      console.info("[web:dashboard] submit-success", { action: editingId ? "update" : "create" });
       resetForm();
     } catch (submitError) {
-      console.error("[web:app] submit-failed", submitError);
-      setError(submitError instanceof Error ? submitError.message : "Failed to save application");
+      console.error("[web:dashboard] submit-failed", submitError);
+      setError(submitError.message);
     } finally {
       setSaving(false);
     }
   }
 
-  async function handleDelete(application: Application): Promise<void> {
+  async function handleDelete(application) {
     const confirmed = window.confirm(`Delete application for ${application.companyName}?`);
 
     if (!confirmed) {
-      console.info("[web:app] delete-cancelled", { id: application.id });
+      console.info("[web:dashboard] delete-cancelled", { id: application.id });
       return;
     }
 
     setSaving(true);
     setError("");
     setMessage("");
-    console.info("[web:app] delete-start", { id: application.id, companyName: application.companyName });
+    console.info("[web:dashboard] delete-start", { id: application.id, companyName: application.companyName });
 
     try {
       await deleteApplication(application.id);
@@ -285,12 +176,101 @@ export default function App(): JSX.Element {
         resetForm();
       }
       setMessage("Application deleted.");
-      console.info("[web:app] delete-success", { id: application.id });
+      console.info("[web:dashboard] delete-success", { id: application.id });
     } catch (deleteError) {
-      console.error("[web:app] delete-failed", deleteError);
-      setError(deleteError instanceof Error ? deleteError.message : "Failed to delete application");
+      console.error("[web:dashboard] delete-failed", deleteError);
+      setError(deleteError.message);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function loadNotesForApplication(applicationId) {
+    setLoadingNotes(true);
+    console.info("[web:dashboard] load-notes-start", { applicationId });
+
+    try {
+      const data = await fetchNotes(applicationId);
+      setNotes((prev) => ({
+        ...prev,
+        [applicationId]: data.notes || [],
+      }));
+      console.info("[web:dashboard] load-notes-success", { applicationId, count: data.notes?.length || 0 });
+    } catch (loadError) {
+      console.error("[web:dashboard] load-notes-failed", loadError);
+      setError(loadError.message);
+    } finally {
+      setLoadingNotes(false);
+    }
+  }
+
+  async function handleAddNote(applicationId) {
+    if (!newNoteText.trim()) {
+      setError("Please enter a note before saving.");
+      return;
+    }
+
+    setSavingNote(true);
+    setError("");
+    setMessage("");
+    console.info("[web:dashboard] create-note-start", { applicationId, textLength: newNoteText.length });
+
+    try {
+      await createNote(applicationId, { noteText: newNoteText });
+      setNewNoteText("");
+      await loadNotesForApplication(applicationId);
+      setMessage("Note added successfully.");
+      console.info("[web:dashboard] create-note-success", { applicationId });
+    } catch (createError) {
+      console.error("[web:dashboard] create-note-failed", createError);
+      setError(createError.message);
+    } finally {
+      setSavingNote(false);
+    }
+  }
+
+  async function handleDeleteNote(applicationId, noteId) {
+    const confirmed = window.confirm("Delete this note?");
+
+    if (!confirmed) {
+      console.info("[web:dashboard] delete-note-cancelled", { noteId });
+      return;
+    }
+
+    setSavingNote(true);
+    setError("");
+    setMessage("");
+    console.info("[web:dashboard] delete-note-start", { noteId, applicationId });
+
+    try {
+      await deleteNote(noteId);
+      await loadNotesForApplication(applicationId);
+      setMessage("Note deleted successfully.");
+      console.info("[web:dashboard] delete-note-success", { noteId });
+    } catch (deleteError) {
+      console.error("[web:dashboard] delete-note-failed", deleteError);
+      setError(deleteError.message);
+    } finally {
+      setSavingNote(false);
+    }
+  }
+
+  function toggleNotesExpanded(applicationId) {
+    if (expandedNotesId === applicationId) {
+      setExpandedNotesId(null);
+    } else {
+      setExpandedNotesId(applicationId);
+      if (!notes[applicationId]) {
+        loadNotesForApplication(applicationId);
+      }
+    }
+  }
+
+  function handleLogout() {
+    const confirmed = window.confirm("Are you sure you want to log out?");
+    if (confirmed) {
+      logout();
+      console.info("[web:dashboard] logout-success", { email: user?.email });
     }
   }
 
@@ -299,9 +279,21 @@ export default function App(): JSX.Element {
       <main className="mx-auto max-w-7xl">
         {/* Header */}
         <header className="mb-12 space-y-4">
-          <div className="flex items-center gap-2">
-            <div className="h-0.5 w-3 bg-gradient-to-r from-oxblood to-teal rounded-full"></div>
-            <p className="text-xs font-semibold uppercase tracking-[0.4em] text-slate">Opportunity Tracker</p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="h-0.5 w-3 bg-gradient-to-r from-oxblood to-teal rounded-full"></div>
+              <p className="text-xs font-semibold uppercase tracking-[0.4em] text-slate">Opportunity Tracker</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-muted">Welcome, <span className="font-semibold text-slate">{user?.email?.split("@")[0]}</span></span>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="rounded-lg border border-red-200 bg-gradient-to-br from-red-50 to-red-50/50 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-red-700 transition hover:bg-red-100 shadow-sm-soft"
+              >
+                Logout
+              </button>
+            </div>
           </div>
           <div className="max-w-3xl space-y-3">
             <h1 className="text-5xl md:text-6xl font-bold tracking-tight bg-gradient-to-r from-slate via-oxblood to-slate bg-clip-text text-transparent">
@@ -389,237 +381,6 @@ export default function App(): JSX.Element {
                   >
                     Cancel
                   </button>
-                ) : null}
-              </div>
-
-              <div className="space-y-5">
-                <div className="grid gap-5 md:grid-cols-2">
-                  <label className="space-y-2 text-sm">
-                    <span className="font-bold text-slate">Company Name</span>
-                    <input
-                      required
-                      value={form.companyName}
-                      onChange={(event) => setForm({ ...form, companyName: event.target.value })}
-                      className="w-full rounded-lg border border-slate/15 bg-white px-4 py-3 text-sm text-charcoal outline-none transition focus:border-slate focus:ring-2 focus:ring-slate/10 focus:shadow-md-soft placeholder:text-muted/50"
-                      placeholder="Acme Corp"
-                    />
-                  </label>
-
-                  <label className="space-y-2 text-sm">
-                    <span className="font-bold text-slate">Position Title</span>
-                    <input
-                      required
-                      value={form.positionTitle}
-                      onChange={(event) => setForm({ ...form, positionTitle: event.target.value })}
-                      className="w-full rounded-lg border border-slate/15 bg-white px-4 py-3 text-sm text-charcoal outline-none transition focus:border-slate focus:ring-2 focus:ring-slate/10 focus:shadow-md-soft placeholder:text-muted/50"
-                      placeholder="Frontend Developer"
-                    />
-                  </label>
-
-                  <label className="space-y-2 text-sm">
-                    <span className="font-bold text-slate">Location</span>
-                    <input
-                      value={form.location}
-                      onChange={(event) => setForm({ ...form, location: event.target.value })}
-                      className="w-full rounded-lg border border-slate/15 bg-white px-4 py-3 text-sm text-charcoal outline-none transition focus:border-slate focus:ring-2 focus:ring-slate/10 focus:shadow-md-soft placeholder:text-muted/50"
-                      placeholder="Remote"
-                    />
-                  </label>
-
-                  <label className="space-y-2 text-sm">
-                    <span className="font-bold text-slate">Application URL</span>
-                    <input
-                      type="url"
-                      value={form.applicationUrl}
-                      onChange={(event) => setForm({ ...form, applicationUrl: event.target.value })}
-                      className="w-full rounded-lg border border-slate/15 bg-white px-4 py-3 text-sm text-charcoal outline-none transition focus:border-slate focus:ring-2 focus:ring-slate/10 focus:shadow-md-soft placeholder:text-muted/50"
-                      placeholder="https://jobs.example.com/123"
-                    />
-                  </label>
-
-                  <label className="space-y-2 text-sm">
-                    <span className="font-bold text-slate">Status</span>
-                    <select
-                      value={form.status}
-                      onChange={(event) => setForm({ ...form, status: event.target.value as ApplicationForm["status"] })}
-                      className="w-full rounded-lg border border-slate/15 bg-white px-4 py-3 text-sm text-charcoal outline-none transition focus:border-slate focus:ring-2 focus:ring-slate/10 focus:shadow-md-soft"
-                    >
-                      {APPLICATION_STATUSES.map((status) => (
-                        <option key={status} value={status}>
-                          {STATUS_LABELS[status]}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label className="space-y-2 text-sm">
-                    <span className="font-bold text-slate">Applied Date</span>
-                    <input
-                      type="date"
-                      value={form.appliedAt}
-                      onChange={(event) => setForm({ ...form, appliedAt: event.target.value })}
-                      className="w-full rounded-lg border border-slate/15 bg-white px-4 py-3 text-sm text-charcoal outline-none transition focus:border-slate focus:ring-2 focus:ring-slate/10 focus:shadow-md-soft"
-                    />
-                  </label>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="mt-4 w-full rounded-lg bg-gradient-to-r from-slate to-slate px-4 py-3.5 text-sm font-bold text-white transition hover:shadow-lg-soft shadow-md-soft disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {saving ? "Saving..." : editingId ? "Update Application" : "Add Application"}
-                </button>
-              </div>
-            </form>
-
-            {/* Applications List */}
-            <section className="rounded-lg border border-slate/15 bg-gradient-to-br from-white to-slate/2 p-8 shadow-md-soft">
-              <div className="mb-7 flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-bold text-slate">Your Applications</h2>
-                  <p className="text-sm text-muted mt-1">Most recent updates appear first</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={loadApplications}
-                  className="rounded-lg border border-slate/20 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-muted transition hover:bg-slate/5 hover:text-slate"
-                >
-                  Refresh
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                {loading ? (
-                  <div className="rounded-lg border border-dashed border-slate/15 bg-gradient-to-br from-slate/2 to-slate/5 p-12 text-center text-sm text-muted">
-                    Loading applications...
-                  </div>
-                ) : applications.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-slate/15 bg-gradient-to-br from-slate/2 to-slate/5 p-12 text-center text-sm text-muted">
-                    No applications yet. Create your first one to get started.
-                  </div>
-                ) : (
-                  applications.map((application) => (
-                    <div key={application.id}>
-                      <article className="rounded-lg border border-slate/10 bg-gradient-to-br from-white to-white/50 p-5 transition hover:shadow-md-soft hover:border-slate/20">
-                        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                          <div className="flex-1">
-                            <div className="flex flex-wrap items-center gap-3">
-                              <h3 className="font-bold text-lg text-slate">{application.companyName}</h3>
-                              <span className="inline-block rounded-full border border-teal/30 bg-gradient-to-r from-teal/10 to-slate/5 px-3 py-1 text-xs font-bold uppercase tracking-wider text-teal">
-                                {STATUS_LABELS[application.status]}
-                              </span>
-                            </div>
-                            <p className="mt-2 text-base font-semibold text-charcoal">{application.positionTitle}</p>
-                            <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted font-medium">
-                              <span>📍 {application.location || "Location not specified"}</span>
-                              <span>📅 Applied {formatDate(application.appliedAt)}</span>
-                              <span>🏷 Status updated {formatDate(application.statusChangedAt)}</span>
-                              <span>🔄 Updated {formatDate(application.updatedAt)}</span>
-                            </div>
-                            {application.applicationUrl ? (
-                              <a
-                                href={application.applicationUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="mt-3 inline-flex gap-1 text-sm font-bold text-teal underline-offset-2 hover:underline"
-                              >
-                                Open Job Post →
-                              </a>
-                            ) : null}
-                          </div>
-
-                          <div className="flex gap-2 md:flex-col md:shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => toggleNotesExpanded(application.id)}
-                              className="rounded-lg border border-teal/20 bg-gradient-to-br from-teal/10 to-teal/5 px-4 py-2 text-xs font-bold uppercase tracking-wider text-teal transition hover:bg-teal hover:text-white hover:border-teal/80 shadow-sm-soft"
-                            >
-                              📝 Notes
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => startEdit(application)}
-                              className="rounded-lg border border-slate/20 bg-gradient-to-br from-slate/10 to-slate/5 px-4 py-2 text-xs font-bold uppercase tracking-wider text-slate transition hover:bg-slate hover:text-white hover:border-slate/80 shadow-sm-soft"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDelete(application)}
-                              className="rounded-lg border border-red-200 bg-gradient-to-br from-red-50 to-red-50/50 px-4 py-2 text-xs font-bold uppercase tracking-wider text-red-700 transition hover:bg-red-100 shadow-sm-soft"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </div>
-                      </article>
-
-                      {/* Notes Panel - Show when expanded */}
-                      {expandedNotesId === application.id && (
-                        <div className="mt-3 rounded-lg border border-teal/20 bg-gradient-to-br from-teal/5 to-teal/2 p-5">
-                          <h4 className="mb-4 text-sm font-bold text-slate">Notes for {application.companyName}</h4>
-
-                          {/* Notes List */}
-                          {loadingNotes ? (
-                            <div className="text-sm text-muted mb-4">Loading notes...</div>
-                          ) : (notes[application.id] || []).length === 0 ? (
-                            <div className="text-sm text-muted mb-4 italic">No notes yet. Create one below.</div>
-                          ) : (
-                            <div className="space-y-3 mb-4">
-                              {(notes[application.id] || []).map((note) => (
-                                <div key={note.id} className="rounded-lg border border-teal/10 bg-white p-3 text-sm">
-                                  <div className="flex items-start justify-between gap-3">
-                                    <p className="text-charcoal flex-1">{note.noteText}</p>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDeleteNote(application.id, note.id)}
-                                      disabled={savingNote}
-                                      className="text-xs font-bold text-red-600 hover:text-red-800 transition flex-shrink-0"
-                                    >
-                                      ✕
-                                    </button>
-                                  </div>
-                                  <div className="mt-2 text-xs text-muted">
-                                    {formatDate(note.createdAt)}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Add Note Form */}
-                          <div className="flex gap-2">
-                            <input
-                              type="text"
-                              value={newNoteText}
-                              onChange={(event) => setNewNoteText(event.target.value)}
-                              placeholder="Add a note..."
-                              disabled={savingNote}
-                              className="flex-1 rounded-lg border border-teal/20 bg-white px-3 py-2 text-sm text-charcoal outline-none transition focus:border-teal focus:ring-2 focus:ring-teal/10 disabled:opacity-60 placeholder:text-muted/50"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => handleAddNote(application.id)}
-                              disabled={savingNote || !newNoteText.trim()}
-                              className="rounded-lg bg-gradient-to-r from-teal to-teal px-4 py-2 text-xs font-bold text-white transition hover:shadow-md-soft disabled:cursor-not-allowed disabled:opacity-60 shadow-sm-soft"
-                            >
-                              {savingNote ? "..." : "Add"}
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
-            </section>
-          </div>
-        </div>
-      </main>
-    </div>
-  );
-}
                 ) : null}
               </div>
 

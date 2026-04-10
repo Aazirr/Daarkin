@@ -18,38 +18,41 @@ function mapApplicationRow(row) {
   };
 }
 
-export async function listApplications() {
-  logger.info("Executing list applications query");
+export async function listApplications(userId) {
+  logger.info("Executing list applications query", { userId });
   const result = await pool.query(
     `
-      SELECT id, company_name, position_title, location, application_url, status, status_changed_at, applied_at, created_at, updated_at
+      SELECT id, company_name, position_title, location, application_url, status, status_changed_at, applied_at, created_at, updated_at, user_id
       FROM applications
+      WHERE user_id = $1
       ORDER BY updated_at DESC, created_at DESC
-    `
+    `,
+    [userId]
   );
 
-  logger.info("List applications query completed", { rows: result.rowCount });
+  logger.info("List applications query completed", { userId, rows: result.rowCount });
   return result.rows.map(mapApplicationRow);
 }
 
-export async function getApplicationById(id) {
-  logger.info("Executing get application query", { id });
+export async function getApplicationById(id, userId) {
+  logger.info("Executing get application query", { id, userId });
   const result = await pool.query(
     `
-      SELECT id, company_name, position_title, location, application_url, status, status_changed_at, applied_at, created_at, updated_at
+      SELECT id, company_name, position_title, location, application_url, status, status_changed_at, applied_at, created_at, updated_at, user_id
       FROM applications
-      WHERE id = $1
+      WHERE id = $1 AND user_id = $2
       LIMIT 1
     `,
-    [id]
+    [id, userId]
   );
 
-  logger.info("Get application query completed", { found: Boolean(result.rows[0]) });
+  logger.info("Get application query completed", { id, userId, found: Boolean(result.rows[0]) });
   return result.rows[0] ? mapApplicationRow(result.rows[0]) : null;
 }
 
-export async function createApplication(input) {
+export async function createApplication(userId, input) {
   logger.info("Executing create application query", {
+    userId,
     companyName: input.companyName,
     positionTitle: input.positionTitle,
     status: input.status,
@@ -57,6 +60,7 @@ export async function createApplication(input) {
   const result = await pool.query(
     `
       INSERT INTO applications (
+        user_id,
         company_name,
         position_title,
         location,
@@ -64,10 +68,11 @@ export async function createApplication(input) {
         status,
         applied_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING id, company_name, position_title, location, application_url, status, status_changed_at, applied_at, created_at, updated_at
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING id, company_name, position_title, location, application_url, status, status_changed_at, applied_at, created_at, updated_at, user_id
     `,
     [
+      userId,
       input.companyName,
       input.positionTitle,
       input.location ?? null,
@@ -77,13 +82,13 @@ export async function createApplication(input) {
     ]
   );
 
-  logger.info("Create application query completed", { id: result.rows[0].id });
+  logger.info("Create application query completed", { userId, id: result.rows[0].id });
   return mapApplicationRow(result.rows[0]);
 }
 
-export async function updateApplication(id, input) {
-  logger.info("Executing update application flow", { id, fields: Object.keys(input) });
-  const current = await getApplicationById(id);
+export async function updateApplication(id, userId, input) {
+  logger.info("Executing update application flow", { id, userId, fields: Object.keys(input) });
+  const current = await getApplicationById(id, userId);
 
   if (!current) {
     return null;
@@ -113,8 +118,8 @@ export async function updateApplication(id, input) {
           application_url = $5,
           status = $6,
           applied_at = $7
-      WHERE id = $1
-      RETURNING id, company_name, position_title, location, application_url, status, status_changed_at, applied_at, created_at, updated_at
+      WHERE id = $1 AND user_id = $8
+      RETURNING id, company_name, position_title, location, application_url, status, status_changed_at, applied_at, created_at, updated_at, user_id
     `,
     [
       id,
@@ -124,16 +129,20 @@ export async function updateApplication(id, input) {
       next.applicationUrl ?? null,
       next.status,
       next.appliedAt || null,
+      userId,
     ]
   );
 
-  logger.info("Update application query completed", { id: result.rows[0].id });
+  logger.info("Update application query completed", { id, userId });
   return mapApplicationRow(result.rows[0]);
 }
 
-export async function deleteApplication(id) {
-  logger.info("Executing delete application query", { id });
-  const result = await pool.query("DELETE FROM applications WHERE id = $1 RETURNING id", [id]);
-  logger.info("Delete application query completed", { id, deleted: result.rowCount > 0 });
+export async function deleteApplication(id, userId) {
+  logger.info("Executing delete application query", { id, userId });
+  const result = await pool.query(
+    "DELETE FROM applications WHERE id = $1 AND user_id = $2 RETURNING id",
+    [id, userId]
+  );
+  logger.info("Delete application query completed", { id, userId, deleted: result.rowCount > 0 });
   return result.rowCount > 0;
 }

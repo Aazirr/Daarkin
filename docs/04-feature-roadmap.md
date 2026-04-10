@@ -24,6 +24,17 @@
 - [x] Create/list/delete notes via API.
 - [x] DB migration for `application_notes` table.
 
+## Phase 3.5: Authentication & Session (COMPLETED)
+- [x] Create users table migration.
+- [x] Build auth service (register, login with bcrypt/JWT).
+- [x] Create auth API endpoints (/register, /login).
+- [x] Build auth-api TypeScript service.
+- [x] Build AuthContext with session caching.
+- [x] Implement localStorage-based session persistence.
+- [x] Create App router for auth/dashboard routing.
+- [x] Convert AuthContext and hooks to TypeScript.
+- [x] Document authentication architecture.
+
 ## Phase 4: Search and Filters
 - Text search (company/role/location/notes).
 - Filter by status.
