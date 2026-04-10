@@ -5,6 +5,31 @@ function log(action, details) {
   console.info(`[web:applications-api] ${action}${suffix}`);
 }
 
+function sanitizeBodySnippet(rawBody) {
+  if (!rawBody) {
+    return "";
+  }
+
+  return rawBody.replace(/\s+/g, " ").trim().slice(0, 180);
+}
+
+function formatHttpError(response, rawBody, path) {
+  const snippet = sanitizeBodySnippet(rawBody);
+  const contentType = response.headers.get("content-type") || "unknown";
+
+  // Vercel edge/pages 404 often returns plain text like:
+  // "The page could not be found NOT_FOUND ..."
+  if (snippet.startsWith("The page could not be found") || snippet.includes("NOT_FOUND")) {
+    return `API route not found for ${path} (status ${response.status}). Verify Vercel API routing for /api.`;
+  }
+
+  if (snippet) {
+    return `Request to ${path} failed (${response.status}). ${snippet}`;
+  }
+
+  return `Request to ${path} failed with status ${response.status} (${contentType}).`;
+}
+
 async function request(path, options = {}) {
   log("request-start", { path, method: options.method || "GET" });
   const response = await fetch(`${API_BASE}${path}`, {
@@ -35,6 +60,7 @@ async function request(path, options = {}) {
   } else {
     log("request-non-json-response", {
       path,
+      url: response.url,
       status: response.status,
       contentType,
       snippet: rawBody.slice(0, 120),
@@ -44,7 +70,7 @@ async function request(path, options = {}) {
   log("request-finish", { path, status: response.status, success: payload?.success !== false });
 
   if (!response.ok || payload?.success === false) {
-    const message = payload?.error?.message || rawBody || "Request failed.";
+    const message = payload?.error?.message || formatHttpError(response, rawBody, path);
     log("request-error", { path, status: response.status, message });
     throw new Error(message);
   }
