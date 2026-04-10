@@ -3,6 +3,7 @@ import {
   applicationCreateSchema,
   applicationUpdateSchema,
   applicationIdSchema,
+  applicationListQuerySchema,
 } from "../schemas/application.schema.js";
 import {
   createApplication,
@@ -85,9 +86,13 @@ export function validateUpdatePayload(body) {
   return applicationUpdateSchema.safeParse(body);
 }
 
-export async function getApplications(userId) {
-  logger.info("Loading applications from repository", { userId });
-  return listApplications(userId);
+export function validateListQuery(query) {
+  return applicationListQuerySchema.safeParse(query);
+}
+
+export async function getApplications(userId, query) {
+  logger.info("Loading applications from repository", { userId, query });
+  return listApplications(userId, query);
 }
 
 export async function getApplication(id, userId) {

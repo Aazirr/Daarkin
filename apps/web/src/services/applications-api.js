@@ -92,8 +92,71 @@ async function request(path, options = {}) {
   return payload.data;
 }
 
-export async function fetchApplications() {
-  return request("/applications");
+async function requestWithMeta(path, options = {}) {
+  log("request-start", { path, method: options.method || "GET" });
+
+  const headers = {
+    "Content-Type": "application/json",
+    ...(options.headers || {}),
+  };
+
+  if (authToken) {
+    headers.Authorization = `Bearer ${authToken}`;
+  }
+
+  const response = await fetch(`${API_BASE}${path}`, {
+    headers,
+    ...options,
+  });
+
+  const contentType = response.headers.get("content-type") || "";
+  const rawBody = await response.text();
+
+  let payload = null;
+
+  if (contentType.includes("application/json")) {
+    try {
+      payload = rawBody ? JSON.parse(rawBody) : null;
+    } catch {
+      throw new Error(`API returned invalid JSON from ${path}.`);
+    }
+  }
+
+  if (!response.ok || payload?.success === false) {
+    const message = payload?.error?.message || formatHttpError(response, rawBody, path);
+    throw new Error(message);
+  }
+
+  return {
+    data: payload?.data ?? null,
+    meta: payload?.meta ?? null,
+  };
+}
+
+export async function fetchApplications(params = {}) {
+  const query = new URLSearchParams();
+
+  if (params.q) {
+    query.set("q", params.q);
+  }
+  if (params.status) {
+    query.set("status", params.status);
+  }
+  if (params.sortBy) {
+    query.set("sortBy", params.sortBy);
+  }
+  if (params.sortOrder) {
+    query.set("sortOrder", params.sortOrder);
+  }
+  if (params.page) {
+    query.set("page", String(params.page));
+  }
+  if (params.pageSize) {
+    query.set("pageSize", String(params.pageSize));
+  }
+
+  const path = query.toString() ? `/applications?${query.toString()}` : "/applications";
+  return requestWithMeta(path);
 }
 
 export async function createApplication(payload) {

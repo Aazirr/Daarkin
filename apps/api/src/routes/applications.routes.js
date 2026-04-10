@@ -7,6 +7,7 @@ import {
   updateExistingApplication,
   validateApplicationId,
   validateCreatePayload,
+  validateListQuery,
   validateUpdatePayload,
 } from "../services/applications.service.js";
 import { authMiddleware } from "../middlewares/auth-middleware.js";
@@ -21,10 +22,45 @@ router.use(authMiddleware);
 
 router.get("/applications", async (req, res, next) => {
   try {
-    logger.info("List applications requested", { userId: req.userId });
-    const applications = await getApplications(req.userId);
-    logger.info("List applications completed", { userId: req.userId, count: applications.length });
-    return sendSuccess(res, { applications });
+    const queryResult = validateListQuery(req.query);
+
+    if (!queryResult.success) {
+      logger.warn("List applications query validation failed", { userId: req.userId });
+      return sendError(res, "Invalid list query parameters.", 400, "VALIDATION_ERROR", queryResult.error.flatten());
+    }
+
+    logger.info("List applications requested", { userId: req.userId, query: queryResult.data });
+
+    const { applications, total } = await getApplications(req.userId, queryResult.data);
+    const totalPages = Math.ceil(total / queryResult.data.pageSize) || 1;
+
+    logger.info("List applications completed", {
+      userId: req.userId,
+      count: applications.length,
+      total,
+      page: queryResult.data.page,
+      pageSize: queryResult.data.pageSize,
+    });
+
+    return sendSuccess(
+      res,
+      { applications },
+      200,
+      {
+        pagination: {
+          page: queryResult.data.page,
+          pageSize: queryResult.data.pageSize,
+          total,
+          totalPages,
+        },
+        filters: {
+          q: queryResult.data.q,
+          status: queryResult.data.status || null,
+          sortBy: queryResult.data.sortBy,
+          sortOrder: queryResult.data.sortOrder,
+        },
+      }
+    );
   } catch (error) {
     return next(error);
   }

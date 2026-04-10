@@ -18,20 +18,83 @@ function mapApplicationRow(row) {
   };
 }
 
-export async function listApplications(userId) {
-  logger.info("Executing list applications query", { userId });
+export async function listApplications(userId, query) {
+  const {
+    q,
+    status,
+    sortBy = "updatedAt",
+    sortOrder = "desc",
+    page = 1,
+    pageSize = 20,
+  } = query;
+
+  logger.info("Executing list applications query", { userId, q, status, sortBy, sortOrder, page, pageSize });
+
+  const sortColumnMap = {
+    updatedAt: "a.updated_at",
+    appliedAt: "a.applied_at",
+    createdAt: "a.created_at",
+    companyName: "a.company_name",
+    status: "a.status",
+  };
+
+  const whereClauses = ["a.user_id = $1"];
+  const whereParams = [userId];
+
+  if (status) {
+    whereParams.push(status);
+    whereClauses.push(`a.status = $${whereParams.length}`);
+  }
+
+  if (q) {
+    whereParams.push(`%${q}%`);
+    const searchIndex = whereParams.length;
+    whereClauses.push(`(
+      a.company_name ILIKE $${searchIndex}
+      OR a.position_title ILIKE $${searchIndex}
+      OR COALESCE(a.location, '') ILIKE $${searchIndex}
+      OR EXISTS (
+        SELECT 1
+        FROM application_notes an
+        WHERE an.application_id = a.id
+          AND an.note_text ILIKE $${searchIndex}
+      )
+    )`);
+  }
+
+  const whereSql = whereClauses.join(" AND ");
+  const sortColumn = sortColumnMap[sortBy] || sortColumnMap.updatedAt;
+  const order = sortOrder === "asc" ? "ASC" : "DESC";
+  const offset = (page - 1) * pageSize;
+
+  const countResult = await pool.query(
+    `
+      SELECT COUNT(*)::int AS total
+      FROM applications a
+      WHERE ${whereSql}
+    `,
+    whereParams
+  );
+
+  const total = countResult.rows[0]?.total || 0;
+
   const result = await pool.query(
     `
       SELECT id, company_name, position_title, location, application_url, status, status_changed_at, applied_at, created_at, updated_at, user_id
-      FROM applications
-      WHERE user_id = $1
-      ORDER BY updated_at DESC, created_at DESC
+      FROM applications a
+      WHERE ${whereSql}
+      ORDER BY ${sortColumn} ${order} NULLS LAST, a.created_at DESC
+      LIMIT $${whereParams.length + 1}
+      OFFSET $${whereParams.length + 2}
     `,
-    [userId]
+    [...whereParams, pageSize, offset]
   );
 
-  logger.info("List applications query completed", { userId, rows: result.rowCount });
-  return result.rows.map(mapApplicationRow);
+  logger.info("List applications query completed", { userId, rows: result.rowCount, total });
+  return {
+    applications: result.rows.map(mapApplicationRow),
+    total,
+  };
 }
 
 export async function getApplicationById(id, userId) {

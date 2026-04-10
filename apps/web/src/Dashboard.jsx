@@ -67,6 +67,16 @@ export default function Dashboard() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  // Phase 4: Search, filter, sort, pagination
+  const [searchText, setSearchText] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("updatedAt");
+  const [sortOrder, setSortOrder] = useState("desc");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   
   // Notes state
   const [expandedNotesId, setExpandedNotesId] = useState(null);
@@ -89,9 +99,24 @@ export default function Dashboard() {
     console.info("[web:dashboard] load-applications-start");
 
     try {
-      const data = await fetchApplications();
-      setApplications(data.applications || []);
-      console.info("[web:dashboard] load-applications-success", { count: data.applications?.length || 0 });
+      const result = await fetchApplications({
+        q: searchText.trim(),
+        status: statusFilter === "all" ? undefined : statusFilter,
+        sortBy,
+        sortOrder,
+        page,
+        pageSize,
+      });
+
+      setApplications(result.data?.applications || []);
+      setTotal(result.meta?.pagination?.total || 0);
+      setTotalPages(result.meta?.pagination?.totalPages || 1);
+
+      console.info("[web:dashboard] load-applications-success", {
+        count: result.data?.applications?.length || 0,
+        total: result.meta?.pagination?.total || 0,
+        page: result.meta?.pagination?.page || page,
+      });
     } catch (loadError) {
       console.error("[web:dashboard] load-applications-failed", loadError);
       setError(loadError.message);
@@ -102,7 +127,11 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadApplications();
-  }, []);
+  }, [searchText, statusFilter, sortBy, sortOrder, page, pageSize]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchText, statusFilter, sortBy, sortOrder, pageSize]);
 
   const summary = useMemo(() => {
     return APPLICATION_STATUSES.reduce(
@@ -470,7 +499,7 @@ export default function Dashboard() {
               <div className="mb-7 flex items-center justify-between">
                 <div>
                   <h2 className="text-xl font-bold text-slate">Your Applications</h2>
-                  <p className="text-sm text-muted mt-1">Most recent updates appear first</p>
+                  <p className="text-sm text-muted mt-1">Search, filter, and sort your pipeline</p>
                 </div>
                 <button
                   type="button"
@@ -481,6 +510,63 @@ export default function Dashboard() {
                 </button>
               </div>
 
+              <div className="mb-5 grid gap-3 md:grid-cols-2">
+                <label className="space-y-2 text-sm md:col-span-2">
+                  <span className="font-bold text-slate">Search</span>
+                  <input
+                    value={searchText}
+                    onChange={(event) => setSearchText(event.target.value)}
+                    className="w-full rounded-lg border border-slate/15 bg-white px-4 py-2.5 text-sm text-charcoal outline-none transition focus:border-slate focus:ring-2 focus:ring-slate/10"
+                    placeholder="Company, role, location, or notes"
+                  />
+                </label>
+
+                <label className="space-y-2 text-sm">
+                  <span className="font-bold text-slate">Status</span>
+                  <select
+                    value={statusFilter}
+                    onChange={(event) => setStatusFilter(event.target.value)}
+                    className="w-full rounded-lg border border-slate/15 bg-white px-4 py-2.5 text-sm text-charcoal outline-none transition focus:border-slate focus:ring-2 focus:ring-slate/10"
+                  >
+                    <option value="all">All statuses</option>
+                    {APPLICATION_STATUSES.map((status) => (
+                      <option key={status} value={status}>
+                        {STATUS_LABELS[status]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="space-y-2 text-sm">
+                    <span className="font-bold text-slate">Sort by</span>
+                    <select
+                      value={sortBy}
+                      onChange={(event) => setSortBy(event.target.value)}
+                      className="w-full rounded-lg border border-slate/15 bg-white px-4 py-2.5 text-sm text-charcoal outline-none transition focus:border-slate focus:ring-2 focus:ring-slate/10"
+                    >
+                      <option value="updatedAt">Updated</option>
+                      <option value="appliedAt">Applied Date</option>
+                      <option value="createdAt">Created</option>
+                      <option value="companyName">Company</option>
+                      <option value="status">Status</option>
+                    </select>
+                  </label>
+
+                  <label className="space-y-2 text-sm">
+                    <span className="font-bold text-slate">Order</span>
+                    <select
+                      value={sortOrder}
+                      onChange={(event) => setSortOrder(event.target.value)}
+                      className="w-full rounded-lg border border-slate/15 bg-white px-4 py-2.5 text-sm text-charcoal outline-none transition focus:border-slate focus:ring-2 focus:ring-slate/10"
+                    >
+                      <option value="desc">Descending</option>
+                      <option value="asc">Ascending</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+
               <div className="space-y-4">
                 {loading ? (
                   <div className="rounded-lg border border-dashed border-slate/15 bg-gradient-to-br from-slate/2 to-slate/5 p-12 text-center text-sm text-muted">
@@ -488,7 +574,7 @@ export default function Dashboard() {
                   </div>
                 ) : applications.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-slate/15 bg-gradient-to-br from-slate/2 to-slate/5 p-12 text-center text-sm text-muted">
-                    No applications yet. Create your first one to get started.
+                    No applications found for the current search/filter.
                   </div>
                 ) : (
                   applications.map((application) => (
@@ -604,6 +690,50 @@ export default function Dashboard() {
                     </div>
                   ))
                 )}
+              </div>
+
+              <div className="mt-6 flex flex-col gap-3 border-t border-slate/10 pt-4 md:flex-row md:items-center md:justify-between">
+                <div className="text-sm text-muted">
+                  Showing {applications.length} of {total} applications
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate/70">
+                    Page Size
+                    <select
+                      value={pageSize}
+                      onChange={(event) => setPageSize(Number(event.target.value))}
+                      className="rounded-lg border border-slate/15 bg-white px-2 py-1.5 text-xs text-charcoal"
+                    >
+                      <option value={5}>5</option>
+                      <option value={10}>10</option>
+                      <option value={20}>20</option>
+                      <option value={50}>50</option>
+                    </select>
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={() => setPage((current) => Math.max(1, current - 1))}
+                    disabled={page <= 1 || loading}
+                    className="rounded-lg border border-slate/20 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-muted transition hover:bg-slate/5 hover:text-slate disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Prev
+                  </button>
+
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate/70">
+                    Page {page} of {totalPages}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+                    disabled={page >= totalPages || loading}
+                    className="rounded-lg border border-slate/20 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-muted transition hover:bg-slate/5 hover:text-slate disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             </section>
           </div>
