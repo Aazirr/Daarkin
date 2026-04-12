@@ -43,7 +43,7 @@
 
 ## Phase 5: Responsive and UX Polish (DELIVERED)
 - [x] Subphase 5A: High-impact UX foundation
-	- Always-visible URL import bar (inline extraction + manual fallback).
+	- Always-visible URL import bar (extract-to-modal review + manual fallback).
 	- Optimistic UI updates with rollback on API failure.
 	- Fast status actions (context menu / badge popover + micro-feedback).
 - [x] Subphase 5B: Core interaction architecture
@@ -103,7 +103,7 @@ Reference: Detailed checklist in `docs/09-ui-ux-redesignplan.md`.
 
 **Phase 7 Subphases:**
 - [x] **7A: Data Model & API** - ✅ Complete (migrations, compensation CRUD endpoints, scoring weights endpoints, all tests passing)
-- [ ] **7B: Compensation UI** - Form to add/edit compensation on application detail, expandable section on list row
+- [x] **7B: Compensation UI** - ✅ Complete (add/edit compensation now uses modal popup form from application detail; improved clean UX flow; added PHP currency support)
 - [x] **7C: Comparison Workspace** - ✅ Complete (filter offers with status='offer', select 2+ to compare, sortable side-by-side table with fields + calculated scores, multi-select UI)
 - [ ] **7D: Scoring Configuration** - User settings for adjustable weights, real-time score recalculation, highlight top offer
 
@@ -112,7 +112,7 @@ Reference: Detailed checklist in `docs/09-ui-ux-redesignplan.md`.
 - OfferComparisonTable component: sortable columns (company, position, salary, bonus, stock, location, score), multi-select, color-coded score badges
 - OfferSelector component: multi-select with remove options, "Compare X Offers" button
 - Offers view with two-column layout and sticky comparison panel
-- Navigation tabs in App header: "Applications" and "Compare Offers"
+- Expandable sidebar navigation with functional "Dashboard", "Board", and active "Offers" states
 - All 42 API tests passing (6 test files)
 
 ## Phase 8: Job URL Autofill
