@@ -79,6 +79,7 @@ Reference: Detailed checklist in `docs/09-ui-ux-redesignplan.md`.
 - [x] Added GitHub Actions CI gate to run workspace test and build on push/PR.
 - [x] Extended route-level API tests with request metadata assertions.
 - [x] Added Dashboard pipeline interaction test to verify filter behavior from status segments.
+- [x] Added Dashboard optimistic status change tests for both success prompt and rollback-on-failure behavior.
 
 ## Phase 7: Offer Intelligence
 - Build salary and offer comparison workspace.

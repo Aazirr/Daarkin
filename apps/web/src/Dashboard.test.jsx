@@ -22,7 +22,7 @@ vi.mock("./services/notes-api.js", () => ({
 }));
 
 import { useAuth } from "./hooks/useAuth";
-import { fetchApplications } from "./services/applications-api.js";
+import { fetchApplications, updateApplication } from "./services/applications-api.js";
 
 function buildResponse(applications) {
   return {
@@ -102,5 +102,63 @@ describe("Dashboard interactions", () => {
         status: "interview",
       })
     );
+  });
+
+  it("updates status and shows success prompt when optimistic update succeeds", async () => {
+    updateApplication.mockResolvedValue({
+      application: {
+        id: "app-1",
+        companyName: "Acme",
+        positionTitle: "Backend Engineer",
+        status: "interview",
+        location: "Remote",
+        applicationUrl: "https://acme.com/jobs/1",
+        appliedAt: "2026-01-01",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-06T00:00:00.000Z",
+        statusChangedAt: "2026-01-06T00:00:00.000Z",
+      },
+    });
+
+    render(<Dashboard />);
+
+    await waitFor(() => {
+      expect(fetchApplications).toHaveBeenCalled();
+    });
+
+    const appliedStatusButton = await screen.findByRole("button", { name: /^Applied$/i });
+    fireEvent.click(appliedStatusButton);
+
+    const interviewOptions = await screen.findAllByRole("button", { name: /^Interview$/i });
+    fireEvent.click(interviewOptions[0]);
+
+    await waitFor(() => {
+      expect(updateApplication).toHaveBeenCalledWith("app-1", { status: "interview" });
+    });
+
+    expect(screen.getByText(/Status updated to Interview\. Want to set a prep reminder next\?/i)).toBeInTheDocument();
+  });
+
+  it("rolls back status and shows error when optimistic update fails", async () => {
+    updateApplication.mockRejectedValue(new Error("Status update failed."));
+
+    render(<Dashboard />);
+
+    await waitFor(() => {
+      expect(fetchApplications).toHaveBeenCalled();
+    });
+
+    const appliedStatusButton = await screen.findByRole("button", { name: /^Applied$/i });
+    fireEvent.click(appliedStatusButton);
+
+    const offerOptions = await screen.findAllByRole("button", { name: /^Offer$/i });
+    fireEvent.click(offerOptions[0]);
+
+    await waitFor(() => {
+      expect(updateApplication).toHaveBeenCalledWith("app-1", { status: "offer" });
+    });
+
+    expect(screen.getByText(/Status update failed\./i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Applied$/i })).toBeInTheDocument();
   });
 });
