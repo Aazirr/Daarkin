@@ -21,6 +21,11 @@ vi.mock("../services/applications.service.js", () => ({
   validateUpdatePayload: vi.fn(),
 }));
 
+vi.mock("../services/url-extraction.service.js", () => ({
+  extractJobDataFromUrl: vi.fn(),
+  calculateOverallConfidence: vi.fn(),
+}));
+
 import applicationsRouter from "./applications.routes.js";
 import {
   createNewApplication,
@@ -32,6 +37,7 @@ import {
   validateListQuery,
   validateUpdatePayload,
 } from "../services/applications.service.js";
+import { extractJobDataFromUrl, calculateOverallConfidence } from "../services/url-extraction.service.js";
 
 function createTestApp() {
   const app = express();
@@ -185,5 +191,72 @@ describe("applications routes", () => {
         positionTitle: "Backend Engineer",
       })
     );
+  });
+
+  it("extracts job data from URL", async () => {
+    extractJobDataFromUrl.mockResolvedValue({
+      companyName: "TechCorp",
+      positionTitle: "Senior Engineer",
+      location: "San Francisco, CA",
+      description: "We are looking for...",
+      confidence: {
+        companyName: 95,
+        positionTitle: 95,
+        location: 95,
+        description: 90,
+      },
+    });
+
+    calculateOverallConfidence.mockReturnValue(93);
+
+    const app = createTestApp();
+    const response = await request(app)
+      .post("/api/applications/extract-from-url")
+      .send({
+        url: "https://example.com/job",
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.data.extracted.companyName).toBe("TechCorp");
+    expect(response.body.data.extracted.positionTitle).toBe("Senior Engineer");
+    expect(response.body.data.extracted.overallConfidence).toBe(93);
+    expect(response.body.data.extracted.sourceUrl).toBe("https://example.com/job");
+    expect(extractJobDataFromUrl).toHaveBeenCalledWith("https://example.com/job");
+  });
+
+  it("returns validation error when URL is missing", async () => {
+    const app = createTestApp();
+    const response = await request(app).post("/api/applications/extract-from-url").send({});
+
+    expect(response.status).toBe(400);
+    expect(response.body.success).toBe(false);
+    expect(response.body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("returns validation error when URL is not a string", async () => {
+    const app = createTestApp();
+    const response = await request(app).post("/api/applications/extract-from-url").send({
+      url: 123,
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body.success).toBe(false);
+    expect(response.body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("returns extraction error when service fails", async () => {
+    extractJobDataFromUrl.mockRejectedValue(new Error("Failed to fetch URL"));
+
+    const app = createTestApp();
+    const response = await request(app)
+      .post("/api/applications/extract-from-url")
+      .send({
+        url: "https://invalid.com/job",
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.success).toBe(false);
+    expect(response.body.error.code).toBe("EXTRACTION_ERROR");
   });
 });

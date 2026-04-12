@@ -10,6 +10,7 @@ import {
   validateListQuery,
   validateUpdatePayload,
 } from "../services/applications.service.js";
+import { extractJobDataFromUrl, calculateOverallConfidence } from "../services/url-extraction.service.js";
 import { authMiddleware } from "../middlewares/auth-middleware.js";
 import { sendError, sendSuccess } from "../utils/http-response.js";
 import { createLogger } from "../utils/logger.js";
@@ -19,6 +20,40 @@ const logger = createLogger("applications-route");
 
 // All application routes require authentication
 router.use(authMiddleware);
+
+// Extract job data from URL (Phase 8)
+router.post("/applications/extract-from-url", async (req, res, next) => {
+  try {
+    const { url } = req.body;
+
+    if (!url || typeof url !== "string") {
+      logger.warn("Extract from URL validation failed - missing or invalid URL", { userId: req.userId });
+      return sendError(res, "URL is required and must be a string.", 400, "VALIDATION_ERROR");
+    }
+
+    logger.info("Extract from URL requested", { userId: req.userId, url });
+
+    const extracted = await extractJobDataFromUrl(url);
+    const overallConfidence = calculateOverallConfidence(extracted);
+
+    logger.info("Extract from URL completed", { userId: req.userId, confidence: overallConfidence });
+
+    return sendSuccess(
+      res,
+      {
+        extracted: {
+          ...extracted,
+          overallConfidence,
+          sourceUrl: url,
+        },
+      },
+      200
+    );
+  } catch (error) {
+    logger.error("Extract from URL failed", { userId: req.userId, error: error.message });
+    return sendError(res, error.message, 400, "EXTRACTION_ERROR");
+  }
+});
 
 router.get("/applications", async (req, res, next) => {
   try {
