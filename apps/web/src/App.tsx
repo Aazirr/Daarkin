@@ -30,7 +30,18 @@ export default function App() {
   // Authenticated users see the dashboard or offers view
   if (isAuthenticated) {
     if (currentView === "offers") {
-      return <Offers onBack={() => setCurrentView("dashboard")} />;
+      return (
+        <Offers
+          onBack={() => {
+            localStorage.setItem("dashboardViewMode", "list");
+            setCurrentView("dashboard");
+          }}
+          onOpenBoard={() => {
+            localStorage.setItem("dashboardViewMode", "kanban");
+            setCurrentView("dashboard");
+          }}
+        />
+      );
     }
 
     return <Dashboard onOpenOffers={() => setCurrentView("offers")} />;
