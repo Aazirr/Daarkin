@@ -91,10 +91,21 @@ Reference: Detailed checklist in `docs/09-ui-ux-redesignplan.md`.
 - Observability: Per-request UUID tracing, standardized error metadata, request-id header propagation
 
 ## Phase 7: Offer Intelligence
-- Build salary and offer comparison workspace.
-- Add compensation fields (base, bonus, equity, benefits, currency, pay cadence).
-- Add offer scoring model (weighted categories configurable by user).
-- Add side-by-side comparison UI for active offers.
+- [~] Build salary and offer comparison workspace.
+- [~] Add compensation fields (base, bonus, equity, benefits, currency, pay cadence).
+- [~] Add offer scoring model (weighted categories configurable by user).
+- [~] Add side-by-side comparison UI for active offers.
+
+**Schema Overview (See `docs/07-phase7-schema.md` for full details):**
+- New table: `application_compensation` - stores base, bonus, equity, benefits, currency, location_type, etc per application
+- New table: `user_scoring_weights` - stores user's configurable scoring weights (base salary: 35%, bonus: 15%, equity: 20%, benefits: 10%, remote: 10%, growth: 10%)
+- Migrations: `007_create_application_compensation.sql` + `008_create_user_scoring_weights.sql`
+
+**Phase 7 Subphases:**
+- **7A: Data Model & API** - Create migrations, add compensation CRUD endpoints, implement scoring weights endpoints, add tests
+- **7B: Compensation UI** - Form to add/edit compensation on application detail, expandable section on list row
+- **7C: Comparison Workspace** - Filter offers (status='offer'), select 2-3 to compare, side-by-side table with all fields + calculated scores
+- **7D: Scoring Configuration** - User settings for adjustable weights, real-time score recalculation, highlight top offer
 
 ## Phase 8: Job URL Autofill
 - Add paste-url flow in create application form.
