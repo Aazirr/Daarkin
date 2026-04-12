@@ -129,14 +129,15 @@ Reference: Detailed checklist in `docs/09-ui-ux-redesignplan.md`.
 ## Phase 8: Job URL Autofill (IN PROGRESS)
 - [x] Backend URL extraction service with multi-strategy parsing
 - [x] API endpoint for extracting job data from URLs
-- [ ] Frontend extraction preview modal
-- [ ] Add URL input field to create application form
-- [ ] Auto-fill form fields with extracted data
+- [x] Frontend extraction preview modal
+- [x] Add URL input field to create application form
+- [x] Auto-fill form fields with extracted data
 - [ ] End-to-end testing
 
 **Phase 8 Subphases:**
-- [x] **8A: Backend URL Extraction** - ✅ In Progress (extraction service complete, API endpoint working, all route tests passing)
-  
+- [x] **8A: Backend URL Extraction** - ✅ Complete (extraction service, API endpoint, route tests)
+- [x] **8B: Frontend Integration** - ✅ Complete (extraction preview modal, form integration, confidence badges)
+
 **Phase 8A Deliverables (Completed):**
 - URL extraction service (`url-extraction.service.js`):
   * Multi-strategy extraction: Open Graph meta tags, JSON-LD JobPosting schema, common job board selectors, domain-based fallback
@@ -154,13 +155,46 @@ Reference: Detailed checklist in `docs/09-ui-ux-redesignplan.md`.
   * Index on `source_url` for query performance
 - Dependencies: cheerio ^1.0.0-rc.12 (npm install completed)
 - Route-level tests: 4 new extraction endpoint tests, all 46 API tests passing across 6 suites
+- Backend commits: `2e2eb10`, `6f67de1`
 
-**Next Steps (8B - Frontend Integration):**
-- Create ExtractionPreview modal component
-- Add URL input field to create application form
-- Wire extraction button to API endpoint
-- Implement visual confidence badges (High/Medium/Low)
-- Test end-to-end workflow
+**Phase 8B Deliverables (Completed):**
+- ExtractionPreview modal component (`ExtractionPreview.jsx`):
+  * Display extracted job data with editable fields
+  * Confidence badges showing extraction reliability (High/Medium/Low with color coding)
+  * Overall confidence bar with visual gradient progress
+  * Allow user to edit any extracted field before confirming
+  * Auto-fill form submission when user clicks "Auto-fill Form"
+- ExtractionPreview styling (`ExtractionPreview.css`):
+  * Dark-themed modal matching dashboard aesthetic
+  * Animations for modal entrance/slide-in
+  * Responsive design (mobile: bottom-sheet style, tablet/desktop: centered)
+  * Color-coded confidence badges (green ≥80%, yellow 60-79%, red <60%)
+  * Focus states and accessibility features
+- Enhanced Dashboard (`Dashboard.jsx`):
+  * Import `ExtractionPreview` component and `extractFromUrl` function
+  * Add extraction state management (extractedData, extractionLoading, extractionError)
+  * Update `handleImportExtract` to detect URLs and call API extraction
+  * Implement graceful fallback to local parsing when API fails
+  * Handle extraction field changes and confirmation flow
+  * Render extraction preview modal in Quick Import section
+- Updated tests (`Dashboard.test.jsx`):
+  * Add `extractFromUrl` to mock
+  * Test fallback behavior when extraction service is unavailable
+  * All 4 Dashboard tests passing
+  * All 7 web tests passing
+- Frontend commits: `d7ea867`
+
+**Test Status (Phase 8 Complete):**
+- Web tests: 7/7 passing ✅
+- API tests: 46/46 passing ✅
+- Extraction endpoint tests: 4/4 passing ✅
+- No regressions from previous phases
+
+**Next Steps (Phase 8C - Optional):**
+- Store extracted source_url in applications table
+- Display extraction confidence in application detail view
+- Add extraction metadata to application records
+- Test end-to-end workflow with real job posting URLs
 
 ## Phase 9: Inbox Integrations (Gmail/Outlook)
 - OAuth connect flow for Gmail and Microsoft accounts.
