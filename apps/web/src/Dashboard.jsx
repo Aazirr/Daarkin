@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { APPLICATION_STATUSES } from "@jat/shared";
 import { useAuth } from "./hooks/useAuth";
+import { CompensationForm } from "./CompensationForm";
 import {
   createApplication,
   deleteApplication,
@@ -14,6 +15,10 @@ import {
   setAuthToken as setNotesAuthToken,
   updateNote,
 } from "./services/notes-api.js";
+import {
+  fetchCompensation,
+  setAuthToken as setCompensationAuthToken,
+} from "./services/compensation-api.js";
 
 const STATUS_LABELS = {
   applied: "Applied",
@@ -354,6 +359,9 @@ export default function Dashboard() {
   const [detailNoteId, setDetailNoteId] = useState(null);
   const [noteStatus, setNoteStatus] = useState("idle");
 
+  const [compensationByApp, setCompensationByApp] = useState({});
+  const [compensationLoadStatus, setCompensationLoadStatus] = useState("idle");
+
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem("sidebarCollapsed") === "1");
   const [viewMode, setViewMode] = useState(() => localStorage.getItem("dashboardViewMode") || "list");
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 640);
@@ -435,6 +443,7 @@ export default function Dashboard() {
     if (token) {
       setAppAuthToken(token);
       setNotesAuthToken(token);
+      setCompensationAuthToken(token);
     }
   }, [token]);
 
@@ -624,6 +633,29 @@ export default function Dashboard() {
       }
     };
   }, [detailNoteText, detailNoteId, selectedApplicationId]);
+
+  useEffect(() => {
+    if (!selectedApplicationId) {
+      return;
+    }
+
+    async function loadCompensation() {
+      setCompensationLoadStatus("loading");
+      try {
+        const data = await fetchCompensation(selectedApplicationId);
+        if (data?.data) {
+          setCompensationByApp((prev) => ({ ...prev, [selectedApplicationId]: data.data }));
+        }
+        setCompensationLoadStatus("idle");
+      } catch (error) {
+        // Fail silently if compensation is not found (it's optional)
+        setCompensationByApp((prev) => ({ ...prev, [selectedApplicationId]: null }));
+        setCompensationLoadStatus("idle");
+      }
+    }
+
+    loadCompensation();
+  }, [selectedApplicationId]);
 
   useEffect(() => {
     function isTypingContext(target) {
@@ -1159,8 +1191,18 @@ export default function Dashboard() {
 
         {selectedApplication.status === "offer" && (
           <section className="stack-sm">
-            <h3>Offer Details</h3>
-            <p className="muted-text">Base, bonus, equity, and vesting details will be tracked here in Phase 7.</p>
+            <h3>Offer Compensation</h3>
+            <CompensationForm
+              applicationId={selectedApplicationId}
+              userId={user?.id}
+              onSave={(compensation) => {
+                setCompensationByApp((prev) => ({
+                  ...prev,
+                  [selectedApplicationId]: compensation,
+                }));
+              }}
+              onError={(error) => setError(error)}
+            />
           </section>
         )}
 
