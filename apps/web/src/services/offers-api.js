@@ -91,3 +91,25 @@ export async function fetchOffer(offerId) {
   const path = `/offers/${offerId}`;
   return requestWithMeta(path).then((result) => result.data);
 }
+
+/**
+ * Fetch user's current scoring weights from the server
+ * Returns: { weights: Object }
+ */
+export async function fetchScoringWeights() {
+  const path = "/user/scoring-weights";
+  return requestWithMeta(path).then((result) => result.data);
+}
+
+/**
+ * Update user's scoring weights
+ * Payload: { weightBaseSalary?, weightBonus?, weightEquity?, weightBenefits?, weightRemote?, weightCareerGrowth? }
+ * Returns: { weights: Object }
+ */
+export async function updateScoringWeights(payload) {
+  const path = "/user/scoring-weights";
+  return requestWithMeta(path, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  }).then((result) => result.data);
+}

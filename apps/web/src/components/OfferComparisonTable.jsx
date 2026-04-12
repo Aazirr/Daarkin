@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-export function OfferComparisonTable({ offers, selectedOfferIds = [], onSelectChange }) {
+export function OfferComparisonTable({ offers, selectedOfferIds = [], onSelectChange, topOfferId }) {
   const [sortBy, setSortBy] = useState("score");
   const [sortOrder, setSortOrder] = useState("desc");
 
@@ -95,16 +95,23 @@ export function OfferComparisonTable({ offers, selectedOfferIds = [], onSelectCh
         <tbody>
           {sortedOffers.map((offer, index) => (
             <tr
-              key={offer.id} 
-              className={`offers-row ${index % 2 === 0 ? "offers-row-even" : "offers-row-odd"}`}
+              key={offer.id}
+              className={`offers-row ${index % 2 === 0 ? "offers-row-even" : "offers-row-odd"} ${
+                offer.id === topOfferId ? "offers-row-top-offer" : ""
+              }`}
             >
               <td className="offers-cell">
-                <input
-                  type="checkbox"
-                  checked={selectedOfferIds.includes(offer.id)}
-                  onChange={() => handleSelectChange(offer.id)}
-                  className="offers-checkbox"
-                />
+                <div className="offers-checkbox-wrap">
+                  <input
+                    type="checkbox"
+                    checked={selectedOfferIds.includes(offer.id)}
+                    onChange={() => handleSelectChange(offer.id)}
+                    className="offers-checkbox"
+                  />
+                  {offer.id === topOfferId && (
+                    <span className="offers-top-indicator" title="Highest scoring offer">👑</span>
+                  )}
+                </div>
               </td>
               <td className="offers-cell offers-company-cell">
                 {offer.companyName || "N/A"}

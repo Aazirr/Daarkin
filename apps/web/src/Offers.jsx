@@ -1,16 +1,19 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "./hooks/useAuth";
-import { fetchOffers, setAuthToken as setOffersAuthToken } from "./services/offers-api.js";
+import { fetchOffers, setAuthToken as setOffersAuthToken, fetchScoringWeights } from "./services/offers-api.js";
 import { OfferComparisonTable } from "./components/OfferComparisonTable.jsx";
 import { OfferSelector } from "./components/OfferSelector.jsx";
+import { ScoringWeightsEditor } from "./components/ScoringWeightsEditor.jsx";
 
 export default function Offers({ onBack, onOpenBoard }) {
   const { user, token } = useAuth();
   const [offers, setOffers] = useState([]);
   const [selectedOfferIds, setSelectedOfferIds] = useState([]);
+  const [weights, setWeights] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem("sidebarCollapsed") === "1");
+  const [showWeightsEditor, setShowWeightsEditor] = useState(false);
 
   useEffect(() => {
     localStorage.setItem("sidebarCollapsed", sidebarCollapsed ? "1" : "0");
@@ -23,7 +26,7 @@ export default function Offers({ onBack, onOpenBoard }) {
     }
   }, [token]);
 
-  // Fetch offers
+  // Fetch offers and weights
   useEffect(() => {
     const loadOffers = async () => {
       try {
@@ -31,7 +34,8 @@ export default function Offers({ onBack, onOpenBoard }) {
         setError(null);
         const data = await fetchOffers();
         setOffers(data.offers || []);
-        console.info("[Offers] Loaded", { count: data.offers?.length || 0 });
+        setWeights(data.weights || {});
+        console.info("[Offers] Loaded", { count: data.offers?.length || 0, weights: data.weights });
       } catch (err) {
         setError(err.message || "Failed to load offers");
         console.error("[Offers] Error loading offers:", err);
@@ -44,6 +48,30 @@ export default function Offers({ onBack, onOpenBoard }) {
       loadOffers();
     }
   }, [user, token]);
+
+  const handleWeightsUpdate = async (updatedWeights) => {
+    try {
+      // Update local weights
+      setWeights(updatedWeights);
+      
+      // Re-fetch offers with new weights to get updated scores
+      const data = await fetchOffers();
+      setOffers(data.offers || []);
+      console.info("[Offers] Weights updated, offers recalculated", { weights: updatedWeights });
+    } catch (err) {
+      console.error("[Offers] Error updating weights:", err);
+    }
+  };
+
+  // Find the top offer (highest score)
+  const topOfferId = offers.length > 0
+    ? offers.reduce((max, offer) => {
+        if (!max || (offer.score !== null && (max.score === null || offer.score > max.score))) {
+          return offer;
+        }
+        return max;
+      }, null)?.id
+    : null;
 
   if (loading) {
     return (
@@ -96,6 +124,14 @@ export default function Offers({ onBack, onOpenBoard }) {
             <p className="app-subtitle">Compare your active offers side-by-side.</p>
           </div>
           <div className="app-user-actions">
+            <button
+              type="button"
+              className="btn btn-subtle"
+              onClick={() => setShowWeightsEditor(true)}
+              title="Adjust scoring weights"
+            >
+              ⚙ Settings
+            </button>
             <button type="button" className="btn btn-subtle" onClick={() => onBack?.()}>
               Back to Dashboard
             </button>
@@ -117,6 +153,7 @@ export default function Offers({ onBack, onOpenBoard }) {
                   offers={offers}
                   selectedOfferIds={selectedOfferIds}
                   onSelectChange={setSelectedOfferIds}
+                  topOfferId={topOfferId}
                 />
               </div>
             </div>
@@ -143,6 +180,14 @@ export default function Offers({ onBack, onOpenBoard }) {
             </div>
           )}
         </div>
+
+        {showWeightsEditor && weights && (
+          <ScoringWeightsEditor
+            weights={weights}
+            onClose={() => setShowWeightsEditor(false)}
+            onUpdate={handleWeightsUpdate}
+          />
+        )}
       </main>
     </div>
   );
