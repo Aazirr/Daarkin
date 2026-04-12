@@ -80,6 +80,15 @@ Reference: Detailed checklist in `docs/09-ui-ux-redesignplan.md`.
 - [x] Extended route-level API tests with request metadata assertions.
 - [x] Added Dashboard pipeline interaction test to verify filter behavior from status segments.
 - [x] Added Dashboard optimistic status change tests for both success prompt and rollback-on-failure behavior.
+- [x] Added comprehensive notes CRUD route tests (9 tests): list, create success/validation/not-found, update success/not-found, delete success/not-found.
+- [x] Added Dashboard import flow test: URL extraction → form completion → application add with success feedback.
+
+**Phase 6 Metrics:**
+- Total tests: 24 (17 API integration, 7 web interaction)
+- API coverage: Applications (5 tests) + Notes (9 tests) + Integration baseline (3 tests)
+- Web coverage: App routing (3 tests) + Dashboard interactions (4 tests: pipeline filter, status optimistic success/rollback, import success)
+- CI/CD: GitHub Actions workflow enforcing tests + build on all commits/PRs
+- Observability: Per-request UUID tracing, standardized error metadata, request-id header propagation
 
 ## Phase 7: Offer Intelligence
 - Build salary and offer comparison workspace.
