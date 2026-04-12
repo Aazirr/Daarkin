@@ -126,11 +126,41 @@ Reference: Detailed checklist in `docs/09-ui-ux-redesignplan.md`.
 - Responsive design for mobile (vertical weight field layout, full-width modal)
 - All 7 web tests passing (no regressions)
 
-## Phase 8: Job URL Autofill
-- Add paste-url flow in create application form.
-- Parse job posting pages and extract role/company/location/description snippets.
-- Pre-fill form fields with confidence labels and allow user edits.
-- Store source URL and extraction metadata for traceability.
+## Phase 8: Job URL Autofill (IN PROGRESS)
+- [x] Backend URL extraction service with multi-strategy parsing
+- [x] API endpoint for extracting job data from URLs
+- [ ] Frontend extraction preview modal
+- [ ] Add URL input field to create application form
+- [ ] Auto-fill form fields with extracted data
+- [ ] End-to-end testing
+
+**Phase 8 Subphases:**
+- [x] **8A: Backend URL Extraction** - ✅ In Progress (extraction service complete, API endpoint working, all route tests passing)
+  
+**Phase 8A Deliverables (Completed):**
+- URL extraction service (`url-extraction.service.js`):
+  * Multi-strategy extraction: Open Graph meta tags, JSON-LD JobPosting schema, common job board selectors, domain-based fallback
+  * Confidence scoring (0-100) for each field: position title (35%), company name (25%), location (20%), description (20%)
+  * Overall confidence calculation
+  * Comprehensive error handling for invalid URLs and network failures
+  * Dynamic cheerio import for Node 18 compatibility
+- API endpoint: `POST /api/applications/extract-from-url`
+  * URL validation (required, string type)
+  * Returns extracted data with confidence levels and overall confidence score
+  * Proper error handling and logging
+- Database migration `009_add_source_url_to_applications.sql`:
+  * `source_url TEXT` column for storing job posting URL
+  * `extraction_metadata JSONB` column for storing extraction details (parser used, timestamp, confidence levels)
+  * Index on `source_url` for query performance
+- Dependencies: cheerio ^1.0.0-rc.12 (npm install completed)
+- Route-level tests: 4 new extraction endpoint tests, all 46 API tests passing across 6 suites
+
+**Next Steps (8B - Frontend Integration):**
+- Create ExtractionPreview modal component
+- Add URL input field to create application form
+- Wire extraction button to API endpoint
+- Implement visual confidence badges (High/Medium/Low)
+- Test end-to-end workflow
 
 ## Phase 9: Inbox Integrations (Gmail/Outlook)
 - OAuth connect flow for Gmail and Microsoft accounts.
