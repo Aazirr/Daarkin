@@ -36,6 +36,17 @@ import {
 function createTestApp() {
   const app = express();
   app.use(express.json());
+  app.use((req, res, next) => {
+    req.requestId = "test-request-id";
+    res.locals.responseMeta = {
+      requestId: "test-request-id",
+      timestamp: "2026-01-01T00:00:00.000Z",
+      method: req.method,
+      path: req.originalUrl,
+    };
+    res.setHeader("x-request-id", "test-request-id");
+    next();
+  });
   app.use("/api", applicationsRouter);
   return app;
 }
@@ -96,6 +107,9 @@ describe("applications routes", () => {
     expect(response.body.success).toBe(true);
     expect(response.body.data.applications).toHaveLength(1);
     expect(response.body.meta.pagination.total).toBe(1);
+    expect(response.headers["x-request-id"]).toBe("test-request-id");
+    expect(response.body.meta.requestId).toBe("test-request-id");
+    expect(response.body.meta.path).toBe("/api/applications");
     expect(getApplications).toHaveBeenCalledWith("user-test-1", expect.any(Object));
   });
 
@@ -118,6 +132,9 @@ describe("applications routes", () => {
     expect(response.status).toBe(400);
     expect(response.body.success).toBe(false);
     expect(response.body.error.code).toBe("VALIDATION_ERROR");
+    expect(response.headers["x-request-id"]).toBe("test-request-id");
+    expect(response.body.meta.requestId).toBe("test-request-id");
+    expect(response.body.meta.path).toBe("/api/applications");
   });
 
   it("returns not found when update target is missing", async () => {
