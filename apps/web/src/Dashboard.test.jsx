@@ -22,7 +22,8 @@ vi.mock("./services/notes-api.js", () => ({
 }));
 
 import { useAuth } from "./hooks/useAuth";
-import { fetchApplications, updateApplication } from "./services/applications-api.js";
+import { createApplication, fetchApplications, updateApplication } from "./services/applications-api.js";
+import { createNote, fetchNotes, updateNote } from "./services/notes-api.js";
 
 function buildResponse(applications) {
   return {
@@ -77,6 +78,10 @@ describe("Dashboard interactions", () => {
         },
       ])
     );
+
+    fetchNotes.mockResolvedValue({
+      notes: [],
+    });
   });
 
   it("applies interview pipeline filter after clicking segment", async () => {
@@ -160,5 +165,51 @@ describe("Dashboard interactions", () => {
 
     expect(screen.getByText(/Status update failed\./i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^Applied$/i })).toBeInTheDocument();
+  });
+
+  it("adds new application after successful import", async () => {
+    createApplication.mockResolvedValue({
+      application: {
+        id: "app-3",
+        companyName: "Gamma Corp",
+        positionTitle: "Frontend Dev",
+        status: "applied",
+        location: "NYC",
+        applicationUrl: "https://gamma.com/jobs/123",
+        appliedAt: "2026-04-13",
+        createdAt: "2026-04-13T00:00:00.000Z",
+        updatedAt: "2026-04-13T00:00:00.000Z",
+        statusChangedAt: "2026-04-13T00:00:00.000Z",
+      },
+    });
+
+    render(<Dashboard />);
+
+    await waitFor(() => {
+      expect(fetchApplications).toHaveBeenCalled();
+    });
+
+    // Paste a URL into Quick Import
+    const importInput = await screen.findByPlaceholderText(/Paste job URL/i);
+    fireEvent.change(importInput, { target: { value: "https://gamma.com/jobs/frontend-dev" } });
+
+    const extractButton = await screen.findByRole("button", { name: /Extract/i });
+    fireEvent.click(extractButton);
+
+    // Wait for draft form and verify it's rendered
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /Save Application/i })).toBeInTheDocument();
+    });
+
+    // Click Save
+    const saveButton = screen.getByRole("button", { name: /Save Application/i });
+    fireEvent.click(saveButton);
+
+    // Verify API called and success feedback
+    await waitFor(() => {
+      expect(createApplication).toHaveBeenCalled();
+    });
+
+    expect(screen.getByText(/Application added from import/i)).toBeInTheDocument();
   });
 });
