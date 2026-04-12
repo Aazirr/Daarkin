@@ -10,6 +10,7 @@ vi.mock("./services/applications-api.js", () => ({
   fetchApplications: vi.fn(),
   createApplication: vi.fn(),
   deleteApplication: vi.fn(),
+  extractFromUrl: vi.fn(),
   setAuthToken: vi.fn(),
   updateApplication: vi.fn(),
 }));
@@ -22,7 +23,7 @@ vi.mock("./services/notes-api.js", () => ({
 }));
 
 import { useAuth } from "./hooks/useAuth";
-import { createApplication, fetchApplications, updateApplication } from "./services/applications-api.js";
+import { createApplication, extractFromUrl, fetchApplications, updateApplication } from "./services/applications-api.js";
 import { createNote, fetchNotes, updateNote } from "./services/notes-api.js";
 
 function buildResponse(applications) {
@@ -168,6 +169,9 @@ describe("Dashboard interactions", () => {
   });
 
   it("adds new application after successful import", async () => {
+    // Mock extractFromUrl to fail, which triggers fallback to local parsing
+    extractFromUrl.mockRejectedValue(new Error("Extraction service unavailable"));
+
     createApplication.mockResolvedValue({
       application: {
         id: "app-3",

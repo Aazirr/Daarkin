@@ -178,3 +178,14 @@ export async function deleteApplication(id) {
     method: "DELETE",
   });
 }
+
+/**
+ * Extract job data from a URL (Phase 8: URL Autofill)
+ * Returns extracted company, position, location, description with confidence scores
+ */
+export async function extractFromUrl(url) {
+  return request("/applications/extract-from-url", {
+    method: "POST",
+    body: JSON.stringify({ url }),
+  });
+}

@@ -5,10 +5,12 @@ import { CompensationForm } from "./CompensationForm";
 import {
   createApplication,
   deleteApplication,
+  extractFromUrl,
   fetchApplications,
   setAuthToken as setAppAuthToken,
   updateApplication,
 } from "./services/applications-api.js";
+import { ExtractionPreview } from "./components/ExtractionPreview.jsx";
 import {
   createNote,
   fetchNotes,
@@ -346,6 +348,11 @@ export default function Dashboard({ onOpenOffers }) {
   const [importLoading, setImportLoading] = useState(false);
   const [importDraft, setImportDraft] = useState(null);
   const [importError, setImportError] = useState("");
+
+  // Phase 8: URL extraction state
+  const [extractedData, setExtractedData] = useState(null);
+  const [extractionLoading, setExtractionLoading] = useState(false);
+  const [extractionError, setExtractionError] = useState("");
 
   const [selectedApplicationId, setSelectedApplicationId] = useState(null);
   const [focusedApplicationId, setFocusedApplicationId] = useState(null);
@@ -824,17 +831,77 @@ export default function Dashboard({ onOpenOffers }) {
   async function handleImportExtract(event) {
     event.preventDefault();
     setImportError("");
+    setExtractionError("");
     setImportLoading(true);
+    setExtractionLoading(true);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 700));
-      const parsed = parseImportInput(importInput);
-      setImportDraft(parsed);
+      const input = importInput.trim();
+      const isUrl = /^https?:\/\//i.test(input);
+
+      // If it's a URL, use the API extraction (Phase 8)
+      if (isUrl) {
+        try {
+          const result = await extractFromUrl(input);
+          const { extracted } = result.data;
+          
+          // Store the extracted data to show in preview modal
+          setExtractedData(extracted);
+          setImportError("");
+          setExtractionError("");
+        } catch (apiError) {
+          // Fall back to local parsing if API fails
+          console.warn("API extraction failed, falling back to local parsing", apiError);
+          setExtractionError(apiError.message || "Extraction service unavailable. Using fallback parsing.");
+          
+          await new Promise((resolve) => setTimeout(resolve, 700));
+          const parsed = parseImportInput(input);
+          setImportDraft(parsed);
+        }
+      } else {
+        // For non-URLs, use local parsing as before
+        await new Promise((resolve) => setTimeout(resolve, 700));
+        const parsed = parseImportInput(input);
+        setImportDraft(parsed);
+      }
     } catch (extractError) {
       setImportError(extractError.message || "Unable to parse input.");
     } finally {
       setImportLoading(false);
+      setExtractionLoading(false);
     }
+  }
+
+  function handleExtractionFieldChange(fieldKey, value) {
+    setExtractedData((prev) => ({
+      ...prev,
+      [fieldKey]: value,
+    }));
+  }
+
+  function handleExtractionCancel() {
+    setExtractedData(null);
+    setExtractionError("");
+  }
+
+  function handleExtractionConfirm() {
+    if (!extractedData) {
+      return;
+    }
+
+    // Populate the import draft from extracted data
+    const draft = {
+      ...DEFAULT_IMPORT_DRAFT,
+      companyName: extractedData.companyName || "",
+      positionTitle: extractedData.positionTitle || "",
+      location: extractedData.location || "",
+      applicationUrl: extractedData.sourceUrl || "",
+      appliedAt: new Date().toISOString().slice(0, 10),
+    };
+
+    setImportDraft(draft);
+    setExtractedData(null);
+    setExtractionError("");
   }
 
   async function optimisticCreateApplication(payload) {
@@ -1396,6 +1463,16 @@ export default function Dashboard({ onOpenOffers }) {
             </button>
           </form>
 
+          {/* Phase 8: URL Extraction Preview Modal */}
+          <ExtractionPreview
+            extracted={extractedData}
+            loading={extractionLoading}
+            onCancel={handleExtractionCancel}
+            onConfirm={handleExtractionConfirm}
+            onFieldChange={handleExtractionFieldChange}
+          />
+
+          {/* Import Review Modal */}
           {importDraft && (
             <div className="import-modal-scrim" role="presentation" onClick={closeImportDraftModal}>
               <div

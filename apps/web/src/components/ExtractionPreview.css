@@ -1,0 +1,234 @@
+/* Extraction Preview Modal Styles */
+
+.extraction-preview-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 1rem;
+  animation: fadeIn 150ms ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.extraction-preview-modal {
+  background: #1a1a1a;
+  color: #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: slideIn 200ms ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Header */
+.extraction-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-bottom: 1px solid #333;
+}
+
+.extraction-preview-header h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.extraction-preview-url {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #888;
+  word-break: break-all;
+  max-height: 2em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+}
+
+/* Confidence Bar */
+.extraction-preview-confidence-bar {
+  padding: 1.5rem;
+  border-bottom: 1px solid #333;
+}
+
+.confidence-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  font-size: 0.875rem;
+  color: #b0b0b0;
+}
+
+.overall-confidence {
+  font-weight: 700;
+  color: #22c55e;
+}
+
+.confidence-bar-track {
+  width: 100%;
+  height: 6px;
+  background: #2a2a2a;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.confidence-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #22c55e 0%, #84cc16 50%, #eab308 100%);
+  border-radius: 3px;
+  transition: width 300ms ease-out;
+}
+
+/* Confidence Badge */
+.confidence-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.75rem;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.confidence-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+/* Fields Section */
+.extraction-preview-fields {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  border-bottom: 1px solid #333;
+}
+
+.extraction-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.field-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.field-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #ffffff;
+  display: block;
+}
+
+.extraction-field-input {
+  padding: 0.75rem;
+  border: 1px solid #333;
+  border-radius: 4px;
+  background: #0f0f0f;
+  color: #e0e0e0;
+  font-size: 0.9375rem;
+  font-family: inherit;
+}
+
+.extraction-field-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.extraction-field-input:disabled {
+  background: #1a1a1a;
+  color: #808080;
+  cursor: not-allowed;
+}
+
+/* Description Preview */
+.extraction-description-preview {
+  padding: 0.75rem;
+  border: 1px solid #333;
+  border-radius: 4px;
+  background: #0f0f0f;
+  font-size: 0.875rem;
+  color: #888;
+  line-height: 1.5;
+}
+
+/* Actions */
+.extraction-preview-actions {
+  display: flex;
+  gap: 1rem;
+  padding: 1.5rem;
+  justify-content: flex-end;
+}
+
+.extraction-preview-actions .btn {
+  flex: 1;
+  max-width: 200px;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .extraction-preview-modal {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 8px 8px 0 0;
+  }
+
+  .extraction-preview-scrim {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .field-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .extraction-preview-actions {
+    flex-direction: column;
+  }
+
+  .extraction-preview-actions .btn {
+    max-width: 100%;
+  }
+}
