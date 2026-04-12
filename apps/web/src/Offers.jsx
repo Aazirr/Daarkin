@@ -4,6 +4,7 @@ import { fetchOffers, setAuthToken as setOffersAuthToken, fetchScoringWeights } 
 import { OfferComparisonTable } from "./components/OfferComparisonTable.jsx";
 import { OfferSelector } from "./components/OfferSelector.jsx";
 import { ScoringWeightsEditor } from "./components/ScoringWeightsEditor.jsx";
+import { OfferComparison } from "./components/OfferComparison.jsx";
 
 export default function Offers({ onBack, onOpenBoard }) {
   const { user, token } = useAuth();
@@ -14,6 +15,7 @@ export default function Offers({ onBack, onOpenBoard }) {
   const [error, setError] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem("sidebarCollapsed") === "1");
   const [showWeightsEditor, setShowWeightsEditor] = useState(false);
+  const [showComparison, setShowComparison] = useState(false);
 
   useEffect(() => {
     localStorage.setItem("sidebarCollapsed", sidebarCollapsed ? "1" : "0");
@@ -165,7 +167,8 @@ export default function Offers({ onBack, onOpenBoard }) {
                 selectedOfferIds={selectedOfferIds}
                 onSelectChange={setSelectedOfferIds}
                 onCompareClick={(ids) => {
-                  console.info("[Offers] Comparing", { count: ids.length, ids });
+                  console.info("[Offers] Opening comparison", { count: ids.length, ids });
+                  setShowComparison(true);
                 }}
               />
             </div>
@@ -186,6 +189,14 @@ export default function Offers({ onBack, onOpenBoard }) {
             weights={weights}
             onClose={() => setShowWeightsEditor(false)}
             onUpdate={handleWeightsUpdate}
+          />
+        )}
+
+        {showComparison && selectedOfferIds.length > 0 && (
+          <OfferComparison
+            offers={offers}
+            selectedOfferIds={selectedOfferIds}
+            onClose={() => setShowComparison(false)}
           />
         )}
       </main>
