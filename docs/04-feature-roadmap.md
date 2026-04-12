@@ -76,6 +76,7 @@ Reference: Detailed checklist in `docs/09-ui-ux-redesignplan.md`.
 - [x] Added authenticated application route tests with mocked auth/service boundaries for list/create/update/delete flows.
 - [x] Added frontend test harness (Vitest + Testing Library) and App auth-route baseline tests.
 - [x] Added request-id propagation (response header + response meta) and standardized metadata assertions for success/error contracts.
+- [x] Added GitHub Actions CI gate to run workspace test and build on push/PR.
 
 ## Phase 7: Offer Intelligence
 - Build salary and offer comparison workspace.
