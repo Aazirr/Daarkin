@@ -375,6 +375,29 @@ a:focus-visible {
   animation: fadeUp var(--motion-base) ease;
 }
 
+.import-modal-scrim {
+  position: fixed;
+  inset: 0;
+  background: var(--surface-overlay);
+  display: grid;
+  place-items: center;
+  z-index: 120;
+  padding: var(--space-4);
+}
+
+.import-modal {
+  width: min(760px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-4);
+  display: grid;
+  gap: var(--space-3);
+}
+
 .grid-two {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

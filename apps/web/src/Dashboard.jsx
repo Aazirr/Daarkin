@@ -323,7 +323,7 @@ function buildReminderCards(applications) {
   return reminders;
 }
 
-export default function Dashboard() {
+export default function Dashboard({ onOpenOffers }) {
   const { user, token, logout } = useAuth();
 
   const [applications, setApplications] = useState([]);
@@ -899,6 +899,11 @@ export default function Dashboard() {
     }
   }
 
+  function closeImportDraftModal() {
+    setImportDraft(null);
+    setImportFieldErrors({});
+  }
+
   async function optimisticDeleteApplication(application) {
     const previous = applications;
 
@@ -1018,7 +1023,6 @@ export default function Dashboard() {
     });
 
     importSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    setTimeout(() => importInputRef.current?.focus(), 250);
   }
 
   function renderAvatar(application) {
@@ -1216,6 +1220,15 @@ export default function Dashboard() {
 
   const showSearchEmpty = !loading && applications.length === 0 && searchText.trim().length > 0;
   const showFirstRunEmpty = !loading && total === 0 && !searchText.trim();
+  const isBoardView = viewMode === "kanban";
+
+  function openDashboardView() {
+    setViewMode("list");
+  }
+
+  function openBoardView() {
+    setViewMode("kanban");
+  }
 
   return (
     <div className={`app-shell ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
@@ -1225,9 +1238,30 @@ export default function Dashboard() {
         </button>
 
         <nav className="sidebar-nav">
-          <button type="button" className="nav-item active" title="Dashboard">▦ {!sidebarCollapsed && <span>Dashboard</span>}</button>
-          <button type="button" className="nav-item" title="Board" onClick={() => setViewMode("kanban")}>☰ {!sidebarCollapsed && <span>Board</span>}</button>
-          <button type="button" className="nav-item" title="Offers">✦ {!sidebarCollapsed && <span>Offers</span>}</button>
+          <button
+            type="button"
+            className={`nav-item ${!isBoardView ? "active" : ""}`}
+            title="Dashboard"
+            onClick={openDashboardView}
+          >
+            ▦ {!sidebarCollapsed && <span>Dashboard</span>}
+          </button>
+          <button
+            type="button"
+            className={`nav-item ${isBoardView ? "active" : ""}`}
+            title="Board"
+            onClick={openBoardView}
+          >
+            ☰ {!sidebarCollapsed && <span>Board</span>}
+          </button>
+          <button
+            type="button"
+            className="nav-item"
+            title="Offers"
+            onClick={() => onOpenOffers?.()}
+          >
+            ✦ {!sidebarCollapsed && <span>Offers</span>}
+          </button>
           <button
             type="button"
             className={`nav-item ${settingsOpen ? "active" : ""}`}
@@ -1363,80 +1397,95 @@ export default function Dashboard() {
           </form>
 
           {importDraft && (
-            <div className="import-draft">
-              <div className="grid-two">
-                <label>
-                  Company
-                  <input
-                    className={`input ${importFieldErrors.companyName ? "input-error" : ""}`}
-                    value={importDraft.companyName}
-                    onChange={(event) => {
-                      setImportDraft({ ...importDraft, companyName: event.target.value });
-                      setImportFieldErrors((prev) => ({ ...prev, companyName: "" }));
-                    }}
-                    aria-invalid={Boolean(importFieldErrors.companyName)}
-                  />
-                  {importFieldErrors.companyName ? <span className="field-error">{importFieldErrors.companyName}</span> : null}
-                </label>
-                <label>
-                  Role
-                  <input
-                    className={`input ${importFieldErrors.positionTitle ? "input-error" : ""}`}
-                    value={importDraft.positionTitle}
-                    onChange={(event) => {
-                      setImportDraft({ ...importDraft, positionTitle: event.target.value });
-                      setImportFieldErrors((prev) => ({ ...prev, positionTitle: "" }));
-                    }}
-                    aria-invalid={Boolean(importFieldErrors.positionTitle)}
-                  />
-                  {importFieldErrors.positionTitle ? <span className="field-error">{importFieldErrors.positionTitle}</span> : null}
-                </label>
-                <label>
-                  Status
-                  <select
-                    className="input"
-                    value={importDraft.status}
-                    onChange={(event) => setImportDraft({ ...importDraft, status: event.target.value })}
-                  >
-                    {APPLICATION_STATUSES.map((status) => (
-                      <option key={status} value={status}>{STATUS_LABELS[status]}</option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Applied Date
-                  <input
-                    type="date"
-                    className="input"
-                    value={importDraft.appliedAt}
-                    onChange={(event) => setImportDraft({ ...importDraft, appliedAt: event.target.value })}
-                  />
-                </label>
-                <label>
-                  Location
-                  <input
-                    className="input"
-                    value={importDraft.location}
-                    onChange={(event) => setImportDraft({ ...importDraft, location: event.target.value })}
-                  />
-                </label>
-                <label>
-                  URL
-                  <input
-                    className="input"
-                    value={importDraft.applicationUrl}
-                    onChange={(event) => setImportDraft({ ...importDraft, applicationUrl: event.target.value })}
-                  />
-                </label>
-              </div>
+            <div className="import-modal-scrim" role="presentation" onClick={closeImportDraftModal}>
+              <div
+                className="import-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Review extracted application"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <div className="panel-header">
+                  <h3>Review Extracted Application</h3>
+                  <button type="button" className="btn btn-subtle" onClick={closeImportDraftModal}>
+                    Close
+                  </button>
+                </div>
 
-              <div className="row-actions">
-                <button type="button" className="btn btn-subtle" onClick={() => setImportDraft(null)}>
-                  Cancel
-                </button>
-                <button type="button" className="btn btn-primary" onClick={handleImportSave} disabled={saving}>
-                  {saving ? "Saving..." : "Save Application"}
-                </button>
+                <div className="grid-two">
+                  <label>
+                    Company
+                    <input
+                      className={`input ${importFieldErrors.companyName ? "input-error" : ""}`}
+                      value={importDraft.companyName}
+                      onChange={(event) => {
+                        setImportDraft({ ...importDraft, companyName: event.target.value });
+                        setImportFieldErrors((prev) => ({ ...prev, companyName: "" }));
+                      }}
+                      aria-invalid={Boolean(importFieldErrors.companyName)}
+                    />
+                    {importFieldErrors.companyName ? <span className="field-error">{importFieldErrors.companyName}</span> : null}
+                  </label>
+                  <label>
+                    Role
+                    <input
+                      className={`input ${importFieldErrors.positionTitle ? "input-error" : ""}`}
+                      value={importDraft.positionTitle}
+                      onChange={(event) => {
+                        setImportDraft({ ...importDraft, positionTitle: event.target.value });
+                        setImportFieldErrors((prev) => ({ ...prev, positionTitle: "" }));
+                      }}
+                      aria-invalid={Boolean(importFieldErrors.positionTitle)}
+                    />
+                    {importFieldErrors.positionTitle ? <span className="field-error">{importFieldErrors.positionTitle}</span> : null}
+                  </label>
+                  <label>
+                    Status
+                    <select
+                      className="input"
+                      value={importDraft.status}
+                      onChange={(event) => setImportDraft({ ...importDraft, status: event.target.value })}
+                    >
+                      {APPLICATION_STATUSES.map((status) => (
+                        <option key={status} value={status}>{STATUS_LABELS[status]}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Applied Date
+                    <input
+                      type="date"
+                      className="input"
+                      value={importDraft.appliedAt}
+                      onChange={(event) => setImportDraft({ ...importDraft, appliedAt: event.target.value })}
+                    />
+                  </label>
+                  <label>
+                    Location
+                    <input
+                      className="input"
+                      value={importDraft.location}
+                      onChange={(event) => setImportDraft({ ...importDraft, location: event.target.value })}
+                    />
+                  </label>
+                  <label>
+                    URL
+                    <input
+                      className="input"
+                      value={importDraft.applicationUrl}
+                      onChange={(event) => setImportDraft({ ...importDraft, applicationUrl: event.target.value })}
+                    />
+                  </label>
+                </div>
+
+                <div className="row-actions">
+                  <button type="button" className="btn btn-subtle" onClick={closeImportDraftModal}>
+                    Cancel
+                  </button>
+                  <button type="button" className="btn btn-primary" onClick={handleImportSave} disabled={saving}>
+                    {saving ? "Saving..." : "Save Application"}
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -1652,9 +1701,9 @@ export default function Dashboard() {
 
       {isMobile && (
         <div className="mobile-bottom-nav">
-          <button type="button" className="nav-item active">▦</button>
-          <button type="button" className="nav-item" onClick={() => setViewMode("kanban")}>☰</button>
-          <button type="button" className="nav-item">✦</button>
+          <button type="button" className={`nav-item ${!isBoardView ? "active" : ""}`} onClick={openDashboardView}>▦</button>
+          <button type="button" className={`nav-item ${isBoardView ? "active" : ""}`} onClick={openBoardView}>☰</button>
+          <button type="button" className="nav-item" onClick={() => onOpenOffers?.()}>✦</button>
           <button type="button" className="nav-item" onClick={() => setSettingsOpen((prev) => !prev)}>⚙</button>
         </div>
       )}
