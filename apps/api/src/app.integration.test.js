@@ -11,6 +11,13 @@ describe("API baseline integration", () => {
     expect(response.body.success).toBe(true);
     expect(response.body.data).toBeTruthy();
     expect(response.body.data.statuses).toEqual(APPLICATION_STATUSES);
+    expect(response.headers["x-request-id"]).toBeTruthy();
+    expect(response.body.meta).toMatchObject({
+      requestId: response.headers["x-request-id"],
+      method: "GET",
+      path: "/api/meta/statuses",
+    });
+    expect(typeof response.body.meta.timestamp).toBe("string");
   });
 
   it("returns NOT_FOUND shape for unknown public routes", async () => {
@@ -20,5 +27,25 @@ describe("API baseline integration", () => {
     expect(response.body.success).toBe(false);
     expect(response.body.error).toBeTruthy();
     expect(response.body.error.code).toBe("NOT_FOUND");
+    expect(response.headers["x-request-id"]).toBeTruthy();
+    expect(response.body.meta).toMatchObject({
+      requestId: response.headers["x-request-id"],
+      method: "GET",
+      path: "/does-not-exist",
+    });
+  });
+
+  it("returns UNAUTHORIZED with standardized metadata when auth token is missing", async () => {
+    const response = await request(app).get("/api/applications");
+
+    expect(response.status).toBe(401);
+    expect(response.body.success).toBe(false);
+    expect(response.body.error.code).toBe("UNAUTHORIZED");
+    expect(response.headers["x-request-id"]).toBeTruthy();
+    expect(response.body.meta).toMatchObject({
+      requestId: response.headers["x-request-id"],
+      method: "GET",
+      path: "/api/applications",
+    });
   });
 });

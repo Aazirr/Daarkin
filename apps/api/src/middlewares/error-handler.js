@@ -10,6 +10,8 @@ export function errorHandler(err, req, res, next) {
 
   logger.error(`${req.method} ${req.originalUrl} failed`, {
     code: err.code || "INTERNAL_ERROR",
+    requestId: req.requestId,
+    statusCode: err.statusCode || 500,
     message: err.message || "Unexpected server error.",
   });
 

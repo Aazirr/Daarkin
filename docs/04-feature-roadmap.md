@@ -71,10 +71,11 @@ Reference: Detailed checklist in `docs/09-ui-ux-redesignplan.md`.
 ## Phase 6: Stabilization (IN PROGRESS)
 - [~] Add unit/integration tests (API first).
 - [~] Add basic frontend tests for key flows.
-- [ ] Improve error logging and API observability.
+- [~] Improve error logging and API observability.
 - [x] Phase 6 kickoff: baseline API integration test harness added with Vitest + Supertest.
 - [x] Added authenticated application route tests with mocked auth/service boundaries for list/create/update/delete flows.
 - [x] Added frontend test harness (Vitest + Testing Library) and App auth-route baseline tests.
+- [x] Added request-id propagation (response header + response meta) and standardized metadata assertions for success/error contracts.
 
 ## Phase 7: Offer Intelligence
 - Build salary and offer comparison workspace.

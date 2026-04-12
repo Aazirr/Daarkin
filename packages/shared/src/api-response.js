@@ -7,7 +7,7 @@ export function createSuccessResponse(data, meta = null) {
   };
 }
 
-export function createErrorResponse(message, code = "INTERNAL_ERROR", details = null) {
+export function createErrorResponse(message, code = "INTERNAL_ERROR", details = null, meta = null) {
   return {
     success: false,
     data: null,
@@ -16,6 +16,6 @@ export function createErrorResponse(message, code = "INTERNAL_ERROR", details = 
       message,
       details,
     },
-    meta: null,
+    meta,
   };
 }
