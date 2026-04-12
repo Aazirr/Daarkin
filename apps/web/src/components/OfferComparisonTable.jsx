@@ -6,8 +6,8 @@ export function OfferComparisonTable({ offers, selectedOfferIds = [], onSelectCh
 
   if (!offers || offers.length === 0) {
     return (
-      <div className="text-center py-12">
-        <p className="text-slate/60">No offers available</p>
+      <div className="offers-empty">
+        <p className="muted-text">No offers available</p>
       </div>
     );
   }
@@ -51,25 +51,25 @@ export function OfferComparisonTable({ offers, selectedOfferIds = [], onSelectCh
   };
 
   const SortHeader = ({ column, label }) => (
-    <th 
+    <th
       onClick={() => handleSort(column)}
-      className="text-left text-sm font-medium text-slate/70 hover:text-slate cursor-pointer py-3 px-4 border-b border-slate/10"
+      className="offers-sort-header"
     >
-      <div className="flex items-center gap-2">
+      <div className="offers-sort-inner">
         {label}
         {sortBy === column && (
-          <span className="text-xs">{sortOrder === "asc" ? "↑" : "↓"}</span>
+          <span className="offers-sort-arrow">{sortOrder === "asc" ? "↑" : "↓"}</span>
         )}
       </div>
     </th>
   );
 
   return (
-    <div className="overflow-x-auto border border-slate/10 rounded-lg">
-      <table className="w-full">
-        <thead className="bg-slate/5">
+    <div className="offers-table-wrap">
+      <table className="offers-table mono-text">
+        <thead>
           <tr>
-            <th className="w-10">
+            <th className="offers-check-col">
               <input
                 type="checkbox"
                 checked={selectedOfferIds.length === offers.length && offers.length > 0}
@@ -80,55 +80,55 @@ export function OfferComparisonTable({ offers, selectedOfferIds = [], onSelectCh
                     onSelectChange?.([]);
                   }
                 }}
-                className="rounded w-4 h-4 text-slate border-slate/30"
+                className="offers-checkbox"
               />
             </th>
             <SortHeader column="companyName" label="Company" />
             <SortHeader column="positionTitle" label="Position" />
             <SortHeader column="baseSalary" label="Base Salary" />
             <SortHeader column="bonusSalary" label="Bonus" />
-            <th className="text-left text-sm font-medium text-slate/70 py-3 px-4 border-b border-slate/10">Stock / Equity</th>
-            <th className="text-left text-sm font-medium text-slate/70 py-3 px-4 border-b border-slate/10">Location</th>
+            <th className="offers-static-header">Stock / Equity</th>
+            <th className="offers-static-header">Location</th>
             <SortHeader column="score" label="Score" />
           </tr>
         </thead>
         <tbody>
           {sortedOffers.map((offer, index) => (
-            <tr 
+            <tr
               key={offer.id} 
-              className={`${
-                index % 2 === 0 ? "bg-white" : "bg-slate/2"
-              } hover:bg-slate/5 border-b border-slate/10 transition-colors`}
+              className={`offers-row ${index % 2 === 0 ? "offers-row-even" : "offers-row-odd"}`}
             >
-              <td className="px-4 py-3">
+              <td className="offers-cell">
                 <input
                   type="checkbox"
                   checked={selectedOfferIds.includes(offer.id)}
                   onChange={() => handleSelectChange(offer.id)}
-                  className="rounded w-4 h-4 text-slate border-slate/30"
+                  className="offers-checkbox"
                 />
               </td>
-              <td className="px-4 py-3 text-sm font-medium text-slate">{offer.companyName || "N/A"}</td>
-              <td className="px-4 py-3 text-sm text-slate/80">{offer.positionTitle || "N/A"}</td>
-              <td className="px-4 py-3 text-sm text-slate/80 font-mono">
+              <td className="offers-cell offers-company-cell">
+                {offer.companyName || "N/A"}
+              </td>
+              <td className="offers-cell offers-muted-cell">{offer.positionTitle || "N/A"}</td>
+              <td className="offers-cell offers-muted-cell">
                 ${(offer.compensation?.baseSalary || 0).toLocaleString()}
               </td>
-              <td className="px-4 py-3 text-sm text-slate/80 font-mono">
+              <td className="offers-cell offers-muted-cell">
                 ${(offer.compensation?.bonusSalary || 0).toLocaleString()}
               </td>
-              <td className="px-4 py-3 text-sm text-slate/80">
+              <td className="offers-cell offers-muted-cell">
                 {offer.compensation?.stockEquity || "—"}
               </td>
-              <td className="px-4 py-3 text-sm text-slate/80">
-                <span className="inline-block px-2 py-1 rounded bg-slate/10 text-xs">
+              <td className="offers-cell offers-muted-cell">
+                <span className="offers-location-pill">
                   {offer.compensation?.locationType === "remote" ? "🌍 Remote" : offer.compensation?.locationType || "—"}
                 </span>
               </td>
-              <td className="px-4 py-3 text-sm font-medium">
-                <span className={`inline-block px-2 py-1 rounded font-mono ${
-                  offer.score >= 85 ? "bg-green/20 text-green/80" :
-                  offer.score >= 70 ? "bg-yellow/20 text-yellow/80" :
-                  "bg-slate/20 text-slate/80"
+              <td className="offers-cell">
+                <span className={`offers-score-badge ${
+                  offer.score >= 85 ? "offers-score-high" :
+                  offer.score >= 70 ? "offers-score-mid" :
+                  "offers-score-low"
                 }`}>
                   {offer.score?.toFixed(0) || "—"}
                 </span>

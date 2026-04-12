@@ -1,8 +1,4 @@
-import { useState } from "react";
-
 export function OfferSelector({ offers = [], selectedOfferIds = [], onSelectChange, onCompareClick }) {
-  const [isOpen, setIsOpen] = useState(false);
-
   const selectedOffers = offers.filter((o) => selectedOfferIds.includes(o.id));
 
   const handleSelectAll = () => {
@@ -18,14 +14,15 @@ export function OfferSelector({ offers = [], selectedOfferIds = [], onSelectChan
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-slate">
+    <div className="stack-sm">
+      <div className="offers-selector-head">
+        <h3>
           Selected ({selectedOfferIds.length} of {offers.length})
         </h3>
         <button
+          type="button"
           onClick={handleSelectAll}
-          className="text-xs px-2 py-1 rounded bg-slate/10 hover:bg-slate/20 text-slate transition-colors"
+          className="btn btn-subtle"
         >
           {selectedOfferIds.length === offers.length ? "Deselect All" : "Select All"}
         </button>
@@ -33,19 +30,20 @@ export function OfferSelector({ offers = [], selectedOfferIds = [], onSelectChan
 
       {selectedOffers.length > 0 && (
         <>
-          <div className="space-y-2">
+          <div className="stack-sm">
             {selectedOffers.map((offer) => (
-              <div 
+              <div
                 key={offer.id}
-                className="flex items-center justify-between p-3 rounded border border-slate/20 bg-slate/5 hover:bg-slate/10 transition-colors"
+                className="offers-selected-item"
               >
                 <div>
-                  <p className="font-medium text-slate text-sm">{offer.companyName}</p>
-                  <p className="text-xs text-slate/60">{offer.positionTitle}</p>
+                  <p className="offers-selected-company">{offer.companyName}</p>
+                  <p className="muted-text offers-selected-role">{offer.positionTitle}</p>
                 </div>
                 <button
+                  type="button"
                   onClick={() => handleRemoveOffer(offer.id)}
-                  className="text-xs px-2 py-1 rounded bg-red/10 hover:bg-red/20 text-red transition-colors"
+                  className="btn btn-subtle offers-remove-btn"
                 >
                   Remove
                 </button>
@@ -54,9 +52,10 @@ export function OfferSelector({ offers = [], selectedOfferIds = [], onSelectChan
           </div>
 
           <button
+            type="button"
             onClick={() => onCompareClick?.(selectedOfferIds)}
             disabled={selectedOfferIds.length < 2}
-            className="w-full px-4 py-2 rounded font-medium bg-slate text-cream hover:bg-slate/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="btn btn-primary offers-compare-btn"
           >
             Compare {selectedOfferIds.length} Offers
           </button>
@@ -64,7 +63,7 @@ export function OfferSelector({ offers = [], selectedOfferIds = [], onSelectChan
       )}
 
       {selectedOffers.length === 0 && (
-        <p className="text-sm text-slate/60 text-center py-6">
+        <p className="muted-text offers-selector-empty">
           Select offers from the table above to compare
         </p>
       )}

@@ -4,7 +4,7 @@ import { fetchOffers, setAuthToken as setOffersAuthToken } from "./services/offe
 import { OfferComparisonTable } from "./components/OfferComparisonTable.jsx";
 import { OfferSelector } from "./components/OfferSelector.jsx";
 
-export default function Offers() {
+export default function Offers({ onBack }) {
   const { user, token } = useAuth();
   const [offers, setOffers] = useState([]);
   const [selectedOfferIds, setSelectedOfferIds] = useState([]);
@@ -42,12 +42,12 @@ export default function Offers() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center w-10 h-10 mb-4">
-            <div className="w-10 h-10 border-4 border-slate/20 border-t-slate rounded-full animate-spin"></div>
+      <div className="app-content">
+        <div className="panel offers-loading">
+          <div className="offers-spinner-wrap">
+            <div className="offers-spinner"></div>
           </div>
-          <p className="text-slate font-medium">Loading offers...</p>
+          <p>Loading offers...</p>
         </div>
       </div>
     );
@@ -55,26 +55,40 @@ export default function Offers() {
 
   if (error) {
     return (
-      <div className="p-6 bg-red/10 border border-red/20 rounded text-red">
-        <p className="font-medium">Error loading offers</p>
-        <p className="text-sm mt-1">{error}</p>
+      <div className="app-content">
+        <div className="alert alert-error">
+          <p><strong>Error loading offers</strong></p>
+          <p className="muted-text">{error}</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="app-content">
+      <div className="app-header">
+        <div>
+          <h1 className="app-title company-display">Offer Comparison</h1>
+          <p className="app-subtitle">Compare your active offers side-by-side.</p>
+        </div>
+        <div className="app-user-actions">
+          <button type="button" className="btn btn-subtle" onClick={() => onBack?.()}>
+            Back to Dashboard
+          </button>
+        </div>
+      </div>
+
+      <div className="stack-sm">
       <div>
-        <h1 className="text-2xl font-bold text-slate mb-2">Offer Comparison</h1>
-        <p className="text-slate/60">
+        <p className="muted-text">
           Compare your offers side-by-side to find the best opportunity for you.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-lg border border-slate/10 p-4">
-            <h2 className="font-semibold text-slate mb-4">Your Offers</h2>
+      <div className="offers-main-grid">
+        <div>
+          <div className="panel">
+            <h2>Your Offers</h2>
             <OfferComparisonTable
               offers={offers}
               selectedOfferIds={selectedOfferIds}
@@ -83,8 +97,8 @@ export default function Offers() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg border border-slate/10 p-4 h-fit sticky top-6">
-          <h2 className="font-semibold text-slate mb-4">Compare Offers</h2>
+        <div className="panel offers-sidebar-panel">
+          <h2>Compare Offers</h2>
           <OfferSelector
             offers={offers}
             selectedOfferIds={selectedOfferIds}
@@ -97,13 +111,14 @@ export default function Offers() {
       </div>
 
       {offers.length === 0 && (
-        <div className="text-center py-12 bg-slate/5 rounded-lg">
-          <p className="text-slate/60">No offers yet</p>
-          <p className="text-sm text-slate/40 mt-2">
+        <div className="empty-state">
+          <p>No offers yet</p>
+          <p className="muted-text">
             Update your application status to "offer" to see it here
           </p>
         </div>
       )}
+      </div>
     </div>
   );
 }
