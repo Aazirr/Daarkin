@@ -8,6 +8,7 @@ import notesRoutes from "./routes/notes.routes.js";
 import authRoutes from "./routes/auth.routes.js";
 import compensationRoutes from "./routes/compensation.routes.js";
 import scoringWeightsRoutes from "./routes/scoring-weights.routes.js";
+import offersRoutes from "./routes/offers.routes.js";
 import { errorHandler } from "./middlewares/error-handler.js";
 import { createLogger } from "./utils/logger.js";
 import { sendError } from "./utils/http-response.js";
@@ -54,6 +55,7 @@ app.use("/api", authRoutes);
 // Protected routes (require auth middleware)
 app.use("/api", compensationRoutes);
 app.use("/api", scoringWeightsRoutes);
+app.use("/api", offersRoutes);
 app.use("/api", applicationsRoutes);
 app.use("/api", notesRoutes);
 
