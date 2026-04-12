@@ -1024,6 +1024,99 @@ a:focus-visible {
   padding: var(--space-4) 0;
 }
 
+.compensation-empty {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.compensation-display {
+  display: grid;
+  gap: 8px;
+}
+
+.compensation-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  background: #1a1314;
+}
+
+.compensation-item .label {
+  color: var(--text-secondary);
+}
+
+.compensation-item .value {
+  color: var(--text-primary);
+  font-weight: 600;
+  text-align: right;
+}
+
+.compensation-modal-scrim {
+  position: fixed;
+  inset: 0;
+  background: var(--surface-overlay);
+  display: grid;
+  place-items: center;
+  z-index: 120;
+  padding: var(--space-4);
+}
+
+.compensation-modal {
+  width: min(760px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-4);
+}
+
+.compensation-form {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.form-group {
+  display: grid;
+  gap: 6px;
+}
+
+.form-group label {
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.btn-danger {
+  color: #e2b1b1;
+  border-color: #5d3234;
+}
+
+.btn-danger:hover {
+  background: #2d1819;
+  border-color: #8b2424;
+}
+
+.error-text {
+  color: #f0b8b8;
+  margin: 0;
+}
+
 .detail-drawer {
   min-height: 520px;
 }
@@ -1112,6 +1205,10 @@ a:focus-visible {
 
   .filter-grid {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
   }
 }
 
