@@ -90,7 +90,7 @@ Reference: Detailed checklist in `docs/09-ui-ux-redesignplan.md`.
 - CI/CD: GitHub Actions workflow enforcing tests + build on all commits/PRs
 - Observability: Per-request UUID tracing, standardized error metadata, request-id header propagation
 
-## Phase 7: Offer Intelligence (IN PROGRESS)
+## Phase 7: Offer Intelligence (COMPLETED ✅)
 - [x] Build salary and offer comparison workspace.
 - [x] Add compensation fields (base, bonus, equity, benefits, currency, pay cadence).
 - [x] Add offer scoring model (weighted categories configurable by user).
@@ -105,7 +105,7 @@ Reference: Detailed checklist in `docs/09-ui-ux-redesignplan.md`.
 - [x] **7A: Data Model & API** - ✅ Complete (migrations, compensation CRUD endpoints, scoring weights endpoints, all tests passing)
 - [x] **7B: Compensation UI** - ✅ Complete (add/edit compensation now uses modal popup form from application detail; improved clean UX flow; added PHP currency support)
 - [x] **7C: Comparison Workspace** - ✅ Complete (filter offers with status='offer', select 2+ to compare, sortable side-by-side table with fields + calculated scores, multi-select UI)
-- [ ] **7D: Scoring Configuration** - User settings for adjustable weights, real-time score recalculation, highlight top offer
+- [x] **7D: Scoring Configuration** - ✅ Complete (adjustable weights with range/number inputs, real-time score recalculation, top offer highlighting, progress bar for weight allocation)
 
 **Phase 7C Deliverables:**
 - Offers API endpoints: `GET /api/offers` and `GET /api/offers/:id` with compensation and scoring data
@@ -114,6 +114,17 @@ Reference: Detailed checklist in `docs/09-ui-ux-redesignplan.md`.
 - Offers view with two-column layout and sticky comparison panel
 - Expandable sidebar navigation with functional "Dashboard", "Board", and active "Offers" states
 - All 42 API tests passing (6 test files)
+
+**Phase 7D Deliverables:**
+- ScoringWeightsEditor modal component with range and number input controls
+- Settings button integrated in Offers view header (⚙ Settings)
+- Real-time offer score recalculation when user adjusts weights
+- Top offer highlighting with crown badge (👑) indicator and visual highlight row
+- Progress bar showing total weight allocation (target: 100%)
+- Reset to default weights option
+- Fetch and update scoring weights API integration (fetchScoringWeights, updateScoringWeights)
+- Responsive design for mobile (vertical weight field layout, full-width modal)
+- All 7 web tests passing (no regressions)
 
 ## Phase 8: Job URL Autofill
 - Add paste-url flow in create application form.
