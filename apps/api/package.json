@@ -10,7 +10,8 @@
     "build": "echo \"No build step required for API yet.\"",
     "lint": "echo \"Lint not configured yet.\"",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "benchmark:parser": "node src/scripts/benchmark-url-parser.js"
   },
   "dependencies": {
     "@jat/shared": "file:../../packages/shared",

@@ -17,6 +17,14 @@ const SOURCE_BASE_SCORE = {
   domainFallback: 35,
 };
 
+function ensureNode18WebApiPolyfills() {
+  // Some transitive dependencies (via cheerio/undici) expect global File.
+  // Node 18 may not expose it in all environments.
+  if (typeof globalThis.File === "undefined") {
+    globalThis.File = class FilePolyfill {};
+  }
+}
+
 /**
  * Extract job posting data from a URL
  * Returns structured data with confidence scores
@@ -26,6 +34,7 @@ export async function extractJobDataFromUrl(url) {
     logger.info("Extracting job data from URL", { url });
 
     // Dynamically import cheerio to avoid Node 18 compatibility issues at import time
+    ensureNode18WebApiPolyfills();
     const { load } = await import("cheerio");
 
     // Validate URL format
@@ -36,22 +45,8 @@ export async function extractJobDataFromUrl(url) {
     }
 
     const trace = [];
-    const pools = createCandidatePools();
-
     const staticHtml = await fetchHtml(url, trace, "static");
-    const $static = load(staticHtml);
-    extractCandidatesFromHtml($static, url, pools, trace, "static");
-
-    let extracted = resolveCandidates(pools, trace);
-
-    if (calculateOverallConfidence(extracted) < RENDER_FALLBACK_THRESHOLD) {
-      const renderedHtml = await fetchRenderedHtml(url, trace);
-      if (renderedHtml) {
-        const $rendered = load(renderedHtml);
-        extractCandidatesFromHtml($rendered, url, pools, trace, "rendered");
-        extracted = resolveCandidates(pools, trace);
-      }
-    }
+    const extracted = await runExtractionPipeline(load, staticHtml, url, trace, true);
 
     extracted.trace = trace;
 
@@ -61,6 +56,38 @@ export async function extractJobDataFromUrl(url) {
     logger.error("Error extracting job data", { url, error: error.message });
     throw error;
   }
+}
+
+/**
+ * Deterministic extraction API for tests, fixtures, and benchmarks.
+ */
+export async function extractJobDataFromHtml(html, url, options = {}) {
+  ensureNode18WebApiPolyfills();
+  const { load } = await import("cheerio");
+  const trace = [];
+  const extracted = await runExtractionPipeline(load, html || "", url, trace, Boolean(options.allowRenderFallback));
+  extracted.trace = trace;
+  return extracted;
+}
+
+async function runExtractionPipeline(load, staticHtml, url, trace, allowRenderFallback) {
+  const pools = createCandidatePools();
+
+  const $static = load(staticHtml || "");
+  extractCandidatesFromHtml($static, url, pools, trace, "static");
+
+  let extracted = resolveCandidates(pools, trace);
+
+  if (allowRenderFallback && calculateOverallConfidence(extracted) < RENDER_FALLBACK_THRESHOLD) {
+    const renderedHtml = await fetchRenderedHtml(url, trace);
+    if (renderedHtml) {
+      const $rendered = load(renderedHtml);
+      extractCandidatesFromHtml($rendered, url, pools, trace, "rendered");
+      extracted = resolveCandidates(pools, trace);
+    }
+  }
+
+  return extracted;
 }
 
 /**
@@ -519,6 +546,39 @@ function getDomainAdapters() {
         companyName: $(".main-header-logo, .main-header").first().text().trim(),
         location: $(".posting-categories .location, .posting-categories").first().text().trim(),
         description: $(".section-wrapper, .posting-description").first().text().trim(),
+      }),
+    },
+    {
+      name: "workday",
+      match: (hostname) => hostname.includes("myworkdayjobs.com") || hostname.includes("workday.com"),
+      extract: ($) => ({
+        positionTitle:
+          $('h1[data-automation-id="jobPostingHeader"]').first().text().trim() ||
+          $('[data-automation-id="jobPostingHeader"]').first().text().trim() ||
+          $("h1").first().text().trim(),
+        companyName:
+          $('[data-automation-id="company"]').first().text().trim() ||
+          $('.css-1idn90j, [data-automation-id="jobPostingCompany"]').first().text().trim(),
+        location:
+          $('[data-automation-id="locations"]').first().text().trim() ||
+          $('[data-automation-id="location"]').first().text().trim(),
+        description:
+          $('[data-automation-id="jobPostingDescription"]').first().text().trim() ||
+          $("main").first().text().trim(),
+      }),
+    },
+    {
+      name: "taleo",
+      match: (hostname) => hostname.includes("taleo.net") || hostname.includes("oraclecloud.com"),
+      extract: ($) => ({
+        positionTitle:
+          $(".titlepage .title, .jobTitle, #requisitionDescriptionInterface\.ID1803\.row1").first().text().trim() ||
+          $("h1").first().text().trim(),
+        companyName:
+          $(".company, .oracletaleocareersection-companyname").first().text().trim() ||
+          getMeta($, "property", "og:site_name"),
+        location: $(".location, .oracletaleocareersection-locations").first().text().trim(),
+        description: $(".description, #requisitionDescriptionInterface\.ID1647\.row1").first().text().trim(),
       }),
     },
   ];
