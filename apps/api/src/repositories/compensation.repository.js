@@ -8,7 +8,6 @@ function mapCompensationRow(row) {
   return {
     id: row.id,
     applicationId: row.application_id,
-    userId: row.user_id,
     baseSalary: row.base_salary ? Number(row.base_salary) : null,
     bonusSalary: row.bonus_salary ? Number(row.bonus_salary) : null,
     signingBonus: row.signing_bonus ? Number(row.signing_bonus) : null,
@@ -27,17 +26,27 @@ export async function getCompensationByApplicationId(applicationId, userId) {
   const query = `
     SELECT c.*
     FROM application_compensation c
-    WHERE c.application_id = $1 AND c.user_id = $2
+    INNER JOIN applications a ON c.application_id = a.id
+    WHERE c.application_id = $1 AND a.user_id = $2
   `;
   const result = await pool.query(query, [applicationId, userId]);
   return mapCompensationRow(result.rows[0]);
 }
 
 export async function createCompensation(applicationId, userId, payload) {
+  // Verify user owns this application
+  const appCheck = await pool.query(
+    "SELECT id FROM applications WHERE id = $1 AND user_id = $2",
+    [applicationId, userId]
+  );
+  
+  if (!appCheck.rows[0]) {
+    throw new Error("Application not found or user does not have access");
+  }
+
   const query = `
     INSERT INTO application_compensation (
       application_id,
-      user_id,
       base_salary,
       bonus_salary,
       signing_bonus,
@@ -47,12 +56,11 @@ export async function createCompensation(applicationId, userId, payload) {
       pay_cadence,
       location_type,
       start_date
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
     RETURNING *
   `;
   const result = await pool.query(query, [
     applicationId,
-    userId,
     payload.baseSalary || null,
     payload.bonusSalary || null,
     payload.signingBonus || null,
@@ -67,9 +75,19 @@ export async function createCompensation(applicationId, userId, payload) {
 }
 
 export async function updateCompensation(applicationId, userId, payload) {
+  // Verify user owns this application
+  const appCheck = await pool.query(
+    "SELECT id FROM applications WHERE id = $1 AND user_id = $2",
+    [applicationId, userId]
+  );
+  
+  if (!appCheck.rows[0]) {
+    throw new Error("Application not found or user does not have access");
+  }
+
   const fields = [];
-  const values = [applicationId, userId];
-  let paramIndex = 3;
+  const values = [applicationId];
+  let paramIndex = 2;
 
   if (Object.prototype.hasOwnProperty.call(payload, "baseSalary")) {
     fields.push(`base_salary = $${paramIndex}`);
@@ -132,7 +150,7 @@ export async function updateCompensation(applicationId, userId, payload) {
   const query = `
     UPDATE application_compensation
     SET ${fields.join(", ")}
-    WHERE application_id = $1 AND user_id = $2
+    WHERE application_id = $1
     RETURNING *
   `;
   const result = await pool.query(query, values);
@@ -140,11 +158,21 @@ export async function updateCompensation(applicationId, userId, payload) {
 }
 
 export async function deleteCompensation(applicationId, userId) {
+  // Verify user owns this application
+  const appCheck = await pool.query(
+    "SELECT id FROM applications WHERE id = $1 AND user_id = $2",
+    [applicationId, userId]
+  );
+  
+  if (!appCheck.rows[0]) {
+    throw new Error("Application not found or user does not have access");
+  }
+
   const query = `
     DELETE FROM application_compensation
-    WHERE application_id = $1 AND user_id = $2
+    WHERE application_id = $1
     RETURNING *
   `;
-  const result = await pool.query(query, [applicationId, userId]);
+  const result = await pool.query(query, [applicationId]);
   return !!result.rows[0]; // Return true if deleted, false if not found
 }
