@@ -376,6 +376,7 @@ export default function Dashboard({ onOpenOffers }) {
   const [searchHintVisible, setSearchHintVisible] = useState(() => localStorage.getItem("searchHintDismissed") !== "1");
   const [importFieldErrors, setImportFieldErrors] = useState({});
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [editingApplicationId, setEditingApplicationId] = useState(null);
   const [tourStep, setTourStep] = useState(() => {
     const completed = localStorage.getItem("dashboardTourCompleted") === "1";
     return completed ? 0 : 1;
@@ -884,6 +885,60 @@ export default function Dashboard({ onOpenOffers }) {
     setExtractionError("");
   }
 
+  function handleEditApplicationOpen(appId) {
+    const app = applications.find((a) => a.id === appId);
+    if (app) {
+      setImportDraft({
+        companyName: app.companyName || "",
+        positionTitle: app.positionTitle || "",
+        location: app.location || "",
+        applicationUrl: app.applicationUrl || "",
+        status: app.status,
+        appliedAt: app.appliedAt || "",
+        remotePolicy: app.remotePolicy || "",
+        salaryRange: app.salaryRange || "",
+      });
+      setEditingApplicationId(appId);
+    }
+  }
+
+  function handleEditApplicationSave() {
+    if (!editingApplicationId) return;
+    
+    const payload = normalizePayload(importDraft);
+    if (!payload.companyName.trim()) {
+      setImportFieldErrors({ companyName: "Company name is required" });
+      return;
+    }
+    if (!payload.positionTitle.trim()) {
+      setImportFieldErrors({ positionTitle: "Position title is required" });
+      return;
+    }
+    
+    setSaving(true);
+    setImportFieldErrors({});
+    
+    updateApplication(editingApplicationId, payload)
+      .then(() => {
+        setMessage("Application updated.");
+        setEditingApplicationId(null);
+        setImportDraft(null);
+        loadApplications();
+      })
+      .catch((err) => {
+        setError(err.message || "Failed to update application.");
+      })
+      .finally(() => {
+        setSaving(false);
+      });
+  }
+
+  function closeEditModal() {
+    setEditingApplicationId(null);
+    setImportDraft(null);
+    setImportFieldErrors({});
+  }
+
   function handleExtractionConfirm() {
     if (!extractedData) {
       return;
@@ -1149,7 +1204,7 @@ export default function Dashboard({ onOpenOffers }) {
 
         <div className="row-right" data-floating-menu>
           <div className="row-hover-actions">
-            <button type="button" className="icon-btn" onClick={(event) => { event.stopPropagation(); openDetails(application.id); }} aria-label="Open details">
+            <button type="button" className="icon-btn" onClick={(event) => { event.stopPropagation(); handleEditApplicationOpen(application.id); }} aria-label="Edit application">
               ✎
             </button>
             {application.applicationUrl ? (
@@ -1473,8 +1528,8 @@ export default function Dashboard({ onOpenOffers }) {
           />
 
           {/* Import Review Modal */}
-          {importDraft && (
-            <div className="import-modal-scrim" role="presentation" onClick={closeImportDraftModal}>
+          {importDraft && !editingApplicationId && (
+            <div className="import-modal-scrim" role="presentation">
               <div
                 className="import-modal"
                 role="dialog"
@@ -1561,6 +1616,101 @@ export default function Dashboard({ onOpenOffers }) {
                   </button>
                   <button type="button" className="btn btn-primary" onClick={handleImportSave} disabled={saving}>
                     {saving ? "Saving..." : "Save Application"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Edit Application Modal */}
+          {importDraft && editingApplicationId && (
+            <div className="import-modal-scrim" role="presentation">
+              <div
+                className="import-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Edit application"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <div className="panel-header">
+                  <h3>Edit Application</h3>
+                  <button type="button" className="btn btn-subtle" onClick={closeEditModal}>
+                    Close
+                  </button>
+                </div>
+
+                <div className="grid-two">
+                  <label>
+                    Company
+                    <input
+                      className={`input ${importFieldErrors.companyName ? "input-error" : ""}`}
+                      value={importDraft.companyName}
+                      onChange={(event) => {
+                        setImportDraft({ ...importDraft, companyName: event.target.value });
+                        setImportFieldErrors((prev) => ({ ...prev, companyName: "" }));
+                      }}
+                      aria-invalid={Boolean(importFieldErrors.companyName)}
+                    />
+                    {importFieldErrors.companyName ? <span className="field-error">{importFieldErrors.companyName}</span> : null}
+                  </label>
+                  <label>
+                    Role
+                    <input
+                      className={`input ${importFieldErrors.positionTitle ? "input-error" : ""}`}
+                      value={importDraft.positionTitle}
+                      onChange={(event) => {
+                        setImportDraft({ ...importDraft, positionTitle: event.target.value });
+                        setImportFieldErrors((prev) => ({ ...prev, positionTitle: "" }));
+                      }}
+                      aria-invalid={Boolean(importFieldErrors.positionTitle)}
+                    />
+                    {importFieldErrors.positionTitle ? <span className="field-error">{importFieldErrors.positionTitle}</span> : null}
+                  </label>
+                  <label>
+                    Status
+                    <select
+                      className="input"
+                      value={importDraft.status}
+                      onChange={(event) => setImportDraft({ ...importDraft, status: event.target.value })}
+                    >
+                      {APPLICATION_STATUSES.map((status) => (
+                        <option key={status} value={status}>{STATUS_LABELS[status]}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Applied Date
+                    <input
+                      type="date"
+                      className="input"
+                      value={importDraft.appliedAt}
+                      onChange={(event) => setImportDraft({ ...importDraft, appliedAt: event.target.value })}
+                    />
+                  </label>
+                  <label>
+                    Location
+                    <input
+                      className="input"
+                      value={importDraft.location}
+                      onChange={(event) => setImportDraft({ ...importDraft, location: event.target.value })}
+                    />
+                  </label>
+                  <label>
+                    URL
+                    <input
+                      className="input"
+                      value={importDraft.applicationUrl}
+                      onChange={(event) => setImportDraft({ ...importDraft, applicationUrl: event.target.value })}
+                    />
+                  </label>
+                </div>
+
+                <div className="row-actions">
+                  <button type="button" className="btn btn-subtle" onClick={closeEditModal}>
+                    Cancel
+                  </button>
+                  <button type="button" className="btn btn-primary" onClick={handleEditApplicationSave} disabled={saving}>
+                    {saving ? "Saving..." : "Save Changes"}
                   </button>
                 </div>
               </div>
@@ -1728,7 +1878,7 @@ export default function Dashboard({ onOpenOffers }) {
             )}
 
             <div className="pagination-row">
-              <span className="muted-text">Showing {applications.length} of {total}</span>
+              <span className="muted-text">Showing {pageSize} per page ({total} total)</span>
               <div className="row-actions">
                 <select className="input input-small" value={pageSize} onChange={(event) => setPageSize(Number(event.target.value))}>
                   <option value={5}>5</option>

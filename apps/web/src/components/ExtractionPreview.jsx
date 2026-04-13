@@ -57,7 +57,7 @@ export function ExtractionPreview({ extracted, loading, onConfirm, onCancel, onF
   ];
 
   return (
-    <div className="extraction-preview-scrim" role="presentation" onClick={onCancel}>
+    <div className="extraction-preview-scrim" role="presentation">
       <div
         className="extraction-preview-modal"
         role="dialog"
