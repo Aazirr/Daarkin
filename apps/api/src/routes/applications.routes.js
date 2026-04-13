@@ -66,7 +66,7 @@ router.get("/applications", async (req, res, next) => {
 
     logger.info("List applications requested", { userId: req.userId, query: queryResult.data });
 
-    const { applications, total } = await getApplications(req.userId, queryResult.data);
+    const { applications, total, statusCounts } = await getApplications(req.userId, queryResult.data);
     const totalPages = Math.ceil(total / queryResult.data.pageSize) || 1;
 
     logger.info("List applications completed", {
@@ -94,6 +94,7 @@ router.get("/applications", async (req, res, next) => {
           sortBy: queryResult.data.sortBy,
           sortOrder: queryResult.data.sortOrder,
         },
+        statusCounts,
       }
     );
   } catch (error) {

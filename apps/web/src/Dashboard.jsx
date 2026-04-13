@@ -331,6 +331,12 @@ export default function Dashboard({ onOpenOffers }) {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [globalStatusCounts, setGlobalStatusCounts] = useState({
+    applied: 0,
+    interview: 0,
+    offer: 0,
+    rejected: 0,
+  });
 
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -511,10 +517,17 @@ export default function Dashboard({ onOpenOffers }) {
       const nextApps = result.data?.applications || [];
       const nextTotal = result.meta?.pagination?.total || 0;
       const nextTotalPages = result.meta?.pagination?.totalPages || 1;
+      const nextStatusCounts = result.meta?.statusCounts || {
+        applied: 0,
+        interview: 0,
+        offer: 0,
+        rejected: 0,
+      };
 
       setApplications(nextApps);
       setTotal(nextTotal);
       setTotalPages(nextTotalPages);
+      setGlobalStatusCounts(nextStatusCounts);
 
       localStorage.setItem(
         cacheKey,
@@ -728,27 +741,35 @@ export default function Dashboard({ onOpenOffers }) {
   }, [applications, focusedApplicationId, selectedApplicationId]);
 
   const metrics = useMemo(() => {
-    const counts = APPLICATION_STATUSES.reduce(
-      (acc, status) => ({ ...acc, [status]: 0 }),
-      { applied: 0, interview: 0, offer: 0, rejected: 0 }
-    );
+    // Use global status counts (all applications matching filters, not just current page)
+    const counts = globalStatusCounts;
 
+    // Calculate response rate based on all applications
+    const totalApps = total || 0;
+    const responseCount = counts.interview + counts.offer;
+    const responseRate = totalApps ? Math.round((responseCount / totalApps) * 100) : 0;
+    const activeApplications = totalApps - counts.rejected;
+
+    // Calculate response days from visible applications (since we don't have full historical data)
     let responseDaysTotal = 0;
     let responseDaysCount = 0;
 
+    applications.forEach((application) => {
+      if (application.appliedAt && application.statusChangedAt && ["interview", "offer", "rejected"].includes(application.status)) {
+        responseDaysTotal += daysBetween(application.appliedAt, application.statusChangedAt);
+        responseDaysCount += 1;
+      }
+    });
+
+    const avgDaysToFirstResponse = responseDaysCount ? Math.round(responseDaysTotal / responseDaysCount) : null;
+
+    // Calculate trend from recent applications
     const now = Date.now();
     const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
     let currentWeek = 0;
     let previousWeek = 0;
 
     applications.forEach((application) => {
-      counts[application.status] += 1;
-
-      if (application.appliedAt && application.statusChangedAt && ["interview", "offer", "rejected"].includes(application.status)) {
-        responseDaysTotal += daysBetween(application.appliedAt, application.statusChangedAt);
-        responseDaysCount += 1;
-      }
-
       const createdAt = new Date(application.createdAt).getTime();
       if (now - createdAt <= sevenDaysMs) {
         currentWeek += 1;
@@ -756,11 +777,6 @@ export default function Dashboard({ onOpenOffers }) {
         previousWeek += 1;
       }
     });
-
-    const visibleTotal = applications.length;
-    const responseRate = visibleTotal ? Math.round(((counts.interview + counts.offer) / visibleTotal) * 100) : 0;
-    const avgDaysToFirstResponse = responseDaysCount ? Math.round(responseDaysTotal / responseDaysCount) : null;
-    const activeApplications = visibleTotal - counts.rejected;
 
     let trend = "flat";
     if (currentWeek > previousWeek) {
@@ -778,7 +794,7 @@ export default function Dashboard({ onOpenOffers }) {
       currentWeek,
       previousWeek,
     };
-  }, [applications]);
+  }, [globalStatusCounts, total, applications]);
 
   const reminderCards = useMemo(() => buildReminderCards(applications), [applications]);
 

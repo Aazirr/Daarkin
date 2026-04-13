@@ -91,9 +91,35 @@ export async function listApplications(userId, query) {
   );
 
   logger.info("List applications query completed", { userId, rows: result.rowCount, total });
+  
+  // Get status counts for all applications matching the filters (not just current page)
+  const statusCountResult = await pool.query(
+    `
+      SELECT status, COUNT(*)::int AS count
+      FROM applications a
+      WHERE ${whereSql}
+      GROUP BY status
+    `,
+    whereParams
+  );
+  
+  const statusCounts = {
+    applied: 0,
+    interview: 0,
+    offer: 0,
+    rejected: 0,
+  };
+  
+  statusCountResult.rows.forEach((row) => {
+    if (statusCounts.hasOwnProperty(row.status)) {
+      statusCounts[row.status] = row.count;
+    }
+  });
+  
   return {
     applications: result.rows.map(mapApplicationRow),
     total,
+    statusCounts,
   };
 }
 

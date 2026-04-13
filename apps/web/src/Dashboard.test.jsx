@@ -27,6 +27,19 @@ import { createApplication, extractFromUrl, fetchApplications, updateApplication
 import { createNote, fetchNotes, updateNote } from "./services/notes-api.js";
 
 function buildResponse(applications) {
+  const statusCounts = {
+    applied: 0,
+    interview: 0,
+    offer: 0,
+    rejected: 0,
+  };
+  
+  applications.forEach((app) => {
+    if (statusCounts.hasOwnProperty(app.status)) {
+      statusCounts[app.status] += 1;
+    }
+  });
+  
   return {
     data: { applications },
     meta: {
@@ -36,6 +49,7 @@ function buildResponse(applications) {
         total: applications.length,
         totalPages: 1,
       },
+      statusCounts,
     },
   };
 }
