@@ -26,6 +26,8 @@ describe("App routing", () => {
       isAuthenticated: false,
       loading: true,
       login: vi.fn(),
+      sessionExpired: false,
+      clearSessionExpired: vi.fn(),
     });
 
     render(<App />);
@@ -38,6 +40,8 @@ describe("App routing", () => {
       isAuthenticated: true,
       loading: false,
       login: vi.fn(),
+      sessionExpired: false,
+      clearSessionExpired: vi.fn(),
     });
 
     render(<App />);
@@ -51,11 +55,28 @@ describe("App routing", () => {
       isAuthenticated: false,
       loading: false,
       login: vi.fn(),
+      sessionExpired: false,
+      clearSessionExpired: vi.fn(),
     });
 
     render(<App />);
 
     expect(screen.getByTestId("landing-view")).toBeInTheDocument();
     expect(screen.queryByTestId("dashboard-view")).not.toBeInTheDocument();
+  });
+
+  it("shows the session expired dialog after automatic logout", () => {
+    useAuth.mockReturnValue({
+      isAuthenticated: false,
+      loading: false,
+      login: vi.fn(),
+      sessionExpired: true,
+      clearSessionExpired: vi.fn(),
+    });
+
+    render(<App />);
+
+    expect(screen.getByRole("dialog", { name: /session expired/i })).toBeInTheDocument();
+    expect(screen.getByText(/we signed you out/i)).toBeInTheDocument();
   });
 });

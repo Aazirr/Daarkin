@@ -1,4 +1,5 @@
 const API_BASE = "/api";
+import { isUnauthorizedResponse, notifySessionExpired } from "./session-expiry.js";
 
 let authToken = null;
 
@@ -59,6 +60,10 @@ async function request(path, options = {}) {
   log("request-finish", { path, status: response.status, success: payload?.success !== false });
 
   if (!response.ok || payload?.success === false) {
+    if (isUnauthorizedResponse(response, payload)) {
+      notifySessionExpired({ path, message: payload?.error?.message || rawBody });
+    }
+
     const message = payload?.error?.message || `Request to ${path} failed with status ${response.status}.`;
     log("request-error", { path, status: response.status, message });
     throw new Error(message);

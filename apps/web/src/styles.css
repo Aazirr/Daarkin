@@ -398,6 +398,16 @@ a:focus-visible {
   gap: var(--space-3);
 }
 
+.session-expired-modal {
+  width: min(460px, 100%);
+}
+
+.session-expired-modal p {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
 .grid-two {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

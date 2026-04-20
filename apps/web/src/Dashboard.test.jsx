@@ -63,6 +63,8 @@ describe("Dashboard interactions", () => {
       user: { id: "u1", email: "user@example.com" },
       token: "token-1",
       logout: vi.fn(),
+      sessionExpired: false,
+      clearSessionExpired: vi.fn(),
     });
 
     fetchApplications.mockResolvedValue(
@@ -229,5 +231,42 @@ describe("Dashboard interactions", () => {
     });
 
     expect(screen.getByText(/Application added from import/i)).toBeInTheDocument();
+  });
+
+  it("keeps pasted company name casing exactly as entered", async () => {
+    render(<Dashboard />);
+
+    await waitFor(() => {
+      expect(fetchApplications).toHaveBeenCalled();
+    });
+
+    const importInput = await screen.findByPlaceholderText(/Paste job URL/i);
+    fireEvent.change(importInput, { target: { value: "KCA Incorporated" } });
+
+    const extractButton = await screen.findByRole("button", { name: /Extract/i });
+    fireEvent.click(extractButton);
+
+    const companyInput = await screen.findByDisplayValue("KCA Incorporated");
+    expect(companyInput).toBeInTheDocument();
+  });
+
+  it("treats pasted links as URLs instead of company names", async () => {
+    extractFromUrl.mockRejectedValue(new Error("Extraction service unavailable"));
+
+    render(<Dashboard />);
+
+    await waitFor(() => {
+      expect(fetchApplications).toHaveBeenCalled();
+    });
+
+    const importInput = await screen.findByPlaceholderText(/Paste job URL/i);
+    fireEvent.change(importInput, { target: { value: "https://www.kca.example/jobs/platform-engineer" } });
+
+    const extractButton = await screen.findByRole("button", { name: /Extract/i });
+    fireEvent.click(extractButton);
+
+    const urlInput = await screen.findByDisplayValue("https://www.kca.example/jobs/platform-engineer");
+    expect(urlInput).toBeInTheDocument();
+    expect(extractFromUrl).toHaveBeenCalledWith("https://www.kca.example/jobs/platform-engineer");
   });
 });

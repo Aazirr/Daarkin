@@ -23,9 +23,7 @@ export default function Offers({ onBack, onOpenBoard }) {
 
   // Set auth token when available
   useEffect(() => {
-    if (token) {
-      setOffersAuthToken(token);
-    }
+    setOffersAuthToken(token || null);
   }, [token]);
 
   // Fetch offers and weights

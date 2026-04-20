@@ -98,6 +98,11 @@ function buildRoleFromPath(pathname) {
   return toTitleWords(parts[0]);
 }
 
+function findFirstUrl(rawInput) {
+  const match = rawInput.match(/https?:\/\/[^\s]+/i);
+  return match ? match[0] : null;
+}
+
 function parseImportInput(rawInput) {
   const input = rawInput.trim();
 
@@ -107,14 +112,16 @@ function parseImportInput(rawInput) {
 
   const today = new Date().toISOString().slice(0, 10);
 
-  if (/^https?:\/\//i.test(input)) {
-    const url = new URL(input);
+  const detectedUrl = findFirstUrl(input);
+
+  if (detectedUrl) {
+    const url = new URL(detectedUrl);
     return {
       ...DEFAULT_IMPORT_DRAFT,
       companyName: buildCompanyFromHost(url.hostname),
       positionTitle: buildRoleFromPath(url.pathname),
       location: "",
-      applicationUrl: input,
+      applicationUrl: detectedUrl,
       appliedAt: today,
     };
   }
@@ -127,11 +134,12 @@ function parseImportInput(rawInput) {
   const firstLine = lines[0] || input;
   const roleMatch = input.match(/(?:for|as)\s+([A-Za-z0-9\-\s\/]{3,80})/i);
   const companyMatch = input.match(/(?:at|with)\s+([A-Za-z0-9&\-\s]{2,60})/i);
+  const looksLikePlainCompanyName = lines.length === 1 && !roleMatch && !companyMatch;
 
   return {
     ...DEFAULT_IMPORT_DRAFT,
-    companyName: companyMatch?.[1]?.trim() || toTitleWords(firstLine.split(" ").slice(0, 3).join(" ")),
-    positionTitle: roleMatch?.[1]?.trim() || "Unknown Role",
+    companyName: looksLikePlainCompanyName ? input : companyMatch?.[1]?.trim() || firstLine,
+    positionTitle: roleMatch?.[1]?.trim() || "",
     appliedAt: today,
   };
 }
@@ -454,11 +462,9 @@ export default function Dashboard({ onOpenOffers }) {
   }, []);
 
   useEffect(() => {
-    if (token) {
-      setAppAuthToken(token);
-      setNotesAuthToken(token);
-      setCompensationAuthToken(token);
-    }
+    setAppAuthToken(token || null);
+    setNotesAuthToken(token || null);
+    setCompensationAuthToken(token || null);
   }, [token]);
 
   const selectedApplication = useMemo(
@@ -854,12 +860,12 @@ export default function Dashboard({ onOpenOffers }) {
 
     try {
       const input = importInput.trim();
-      const isUrl = /^https?:\/\//i.test(input);
+      const detectedUrl = findFirstUrl(input);
 
       // If it's a URL, use the API extraction (Phase 8)
-      if (isUrl) {
+      if (detectedUrl) {
         try {
-          const result = await extractFromUrl(input);
+          const result = await extractFromUrl(detectedUrl);
           const { extracted } = result.data;
           
           // Store the extracted data to show in preview modal

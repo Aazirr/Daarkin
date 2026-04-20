@@ -1,5 +1,9 @@
 import { createContext, useState, useEffect, ReactNode } from "react";
 import type { User } from "../services/auth-api";
+import {
+  clearSessionExpiredNotice,
+  setSessionExpiredHandler,
+} from "../services/session-expiry.js";
 
 export interface AuthContextValue {
   user: User | null;
@@ -7,6 +11,8 @@ export interface AuthContextValue {
   loading: boolean;
   login: (token: string, user: User) => void;
   logout: () => void;
+  sessionExpired: boolean;
+  clearSessionExpired: () => void;
   isAuthenticated: boolean;
 }
 
@@ -33,6 +39,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   // Initialize from localStorage on mount (session hydration)
   useEffect(() => {
@@ -56,6 +63,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   function login(newToken: string, newUser: User): void {
     setToken(newToken);
     setUser(newUser);
+    setSessionExpired(false);
+    clearSessionExpiredNotice();
     // Persist to localStorage for session recovery on page reload
     localStorage.setItem("token", newToken);
     localStorage.setItem("user", JSON.stringify(newUser));
@@ -69,12 +78,33 @@ export function AuthProvider({ children }: AuthProviderProps) {
     localStorage.removeItem("user");
   }
 
+  function clearSessionExpired(): void {
+    setSessionExpired(false);
+    clearSessionExpiredNotice();
+  }
+
+  useEffect(() => {
+    setSessionExpiredHandler(() => {
+      setSessionExpired(true);
+      setToken(null);
+      setUser(null);
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+    });
+
+    return () => {
+      setSessionExpiredHandler(null);
+    };
+  }, []);
+
   const value: AuthContextValue = {
     user,
     token,
     loading,
     login,
     logout,
+    sessionExpired,
+    clearSessionExpired,
     isAuthenticated: !!token && !!user,
   };
 

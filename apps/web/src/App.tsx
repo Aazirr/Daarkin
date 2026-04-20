@@ -10,7 +10,7 @@ import Offers from "./Offers";
  * Handles session restoration from localStorage on app startup
  */
 export default function App() {
-  const { isAuthenticated, loading, login } = useAuth();
+  const { isAuthenticated, loading, login, sessionExpired, clearSessionExpired } = useAuth();
   const [currentView, setCurrentView] = useState("dashboard");
 
   // Show loading state while attempting to restore session from localStorage
@@ -28,9 +28,11 @@ export default function App() {
   }
 
   // Authenticated users see the dashboard or offers view
+  let content = <Landing onLogin={login} />;
+
   if (isAuthenticated) {
     if (currentView === "offers") {
-      return (
+      content = (
         <Offers
           onBack={() => {
             localStorage.setItem("dashboardViewMode", "list");
@@ -42,11 +44,35 @@ export default function App() {
           }}
         />
       );
+    } else {
+      content = <Dashboard onOpenOffers={() => setCurrentView("offers")} />;
     }
-
-    return <Dashboard onOpenOffers={() => setCurrentView("offers")} />;
   }
 
-  // Unauthenticated users see the landing/auth page
-  return <Landing onLogin={login} />;
+  return (
+    <>
+      {content}
+      {sessionExpired ? (
+        <div className="import-modal-scrim" role="presentation">
+          <div
+            className="import-modal session-expired-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="session-expired-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="panel-header">
+              <h2 id="session-expired-title">Session Expired</h2>
+            </div>
+            <p>Your login session expired, so we signed you out. Please log in again to continue.</p>
+            <div className="row-actions">
+              <button type="button" className="btn btn-primary" onClick={clearSessionExpired}>
+                Log In Again
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
 }
