@@ -12,6 +12,11 @@ function createApplicationsIntent(overrides = {}) {
     focusImport: false,
     importSeed: "",
     statusFilter: "all",
+    focusMode: null,
+    page: 1,
+    pageSize: 10,
+    sortBy: "updatedAt",
+    sortOrder: "desc",
     ...overrides,
   };
 }
@@ -70,11 +75,14 @@ export default function App() {
             openApplications({
               focusImport: true,
               importSeed,
+              pageSize: 100,
             })
           }
           onReviewFollowUps={() =>
             openApplications({
-              statusFilter: "applied",
+              focusMode: "follow-ups",
+              pageSize: 100,
+              sortOrder: "asc",
             })
           }
         />

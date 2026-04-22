@@ -196,6 +196,40 @@ Reference: Detailed checklist in `docs/09-ui-ux-redesignplan.md`.
 - Add extraction metadata to application records
 - Test end-to-end workflow with real job posting URLs
 
+## Phase 10: Guided Home Dashboard (IN PROGRESS)
+- [x] Reframe the signed-in default experience around a guided `Home` briefing screen.
+- [x] Reposition the old dashboard as the `Applications` workspace.
+- [x] Add Home overview modules: greeting, key stats, activity, reminders, aging insight, action cards, quick import.
+- [~] Improve guidance quality by routing Home cards/reminders into precise Applications review states.
+- [ ] Add event-aware reminder intelligence for interview today/tomorrow experiences.
+- [ ] Further refine the Applications workspace around the new Home-first mental model.
+
+**Phase 10 Implementation Phases:**
+- [x] **10A: Guided Home Foundation** - complete
+  - New signed-in `Home` landing experience
+  - Home as the default post-login destination
+  - Updated shell/navigation framing (`Home`, `Applications`, `Board`, `Offers`)
+  - Initial stats, activity, reminders, aging panel, action cards
+  - Compact quick import handoff into Applications
+- [~] **10B: Guidance and Reminder Quality** - in progress
+  - Guided navigation intents from Home into Applications
+  - Focused Applications review states for follow-ups, stale interviews, active pipeline, today, and aging buckets
+  - Guided-state banner and clearer messaging in Applications
+  - Remaining work: refine reminder heuristics, improve follow-up prioritization, strengthen guided UI clarity
+- [ ] **10C: Upcoming Event Intelligence** - not started
+  - Structured event/interview dates
+  - Today/tomorrow reminder cards
+  - Event-aware urgency states
+- [ ] **10D: Applications Workspace Refinement** - not started
+  - Better guided-state chips or filter chips
+  - Clearer Applications hierarchy
+  - Improved empty states and detailed workspace polish
+
+Reference:
+- `docs/10-guided-dashboard-home.md`
+- `docs/11-home-wireframe-spec.md`
+- `docs/12-home-implementation-plan.md`
+
 ## Phase 9: Inbox Integrations (Gmail/Outlook)
 - OAuth connect flow for Gmail and Microsoft accounts.
 - Sync application-related emails with background fetch.

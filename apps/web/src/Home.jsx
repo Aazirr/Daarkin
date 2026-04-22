@@ -115,6 +115,8 @@ function buildHomeSummary(applications, totalCount) {
   };
 
   const reminders = [];
+  let staleInterviewCount = 0;
+  let staleAppliedCount = 0;
 
   activeApplications.forEach((application) => {
     const ageInDays = daysSince(application.createdAt || application.appliedAt, now);
@@ -129,13 +131,16 @@ function buildHomeSummary(applications, totalCount) {
     }
 
     if (application.status === "interview" && idleDays >= 5) {
+      staleInterviewCount += 1;
       reminders.push({
         id: `interview-${application.id}`,
         title: `Follow up with ${application.companyName}`,
         body: "Interview-stage application has gone quiet for 5+ days.",
         action: "Review follow-up",
-        intent: "follow-ups",
+        intent: { focusMode: "follow-ups", statusFilter: "interview", pageSize: 100, sortOrder: "asc" },
       });
+    } else if (application.status === "applied" && idleDays >= 7) {
+      staleAppliedCount += 1;
     }
   });
 
@@ -145,7 +150,7 @@ function buildHomeSummary(applications, totalCount) {
       title: `${aging.twoWeeks + aging.threeWeeks} aging applications need attention`,
       body: "Two-week and three-week applications are prime follow-up candidates.",
       action: "Open aging list",
-      intent: "follow-ups",
+      intent: { focusMode: "aging-14-plus", pageSize: 100, sortOrder: "asc" },
     });
   }
 
@@ -160,7 +165,7 @@ function buildHomeSummary(applications, totalCount) {
       title: "Search momentum is slowing down",
       body: "No new applications have been captured in the last 4 days.",
       action: "Save an application",
-      intent: "import",
+      intent: { focusImport: true, pageSize: 100 },
     });
   }
 
@@ -180,8 +185,20 @@ function buildHomeSummary(applications, totalCount) {
   return {
     stats,
     aging,
-    reminders: reminders.slice(0, 3),
+    reminders: reminders
+      .sort((a, b) => {
+        if (a.id.startsWith("interview-") && !b.id.startsWith("interview-")) {
+          return -1;
+        }
+        if (!a.id.startsWith("interview-") && b.id.startsWith("interview-")) {
+          return 1;
+        }
+        return 0;
+      })
+      .slice(0, 3),
     activity: buildActivitySeries(applications),
+    staleInterviewCount,
+    staleAppliedCount,
   };
 }
 
@@ -250,7 +267,7 @@ export default function Home({
   const highestActivity = Math.max(1, ...summary.activity.map((day) => day.count));
 
   const summaryLine = summary.reminders[0]
-    ? `${summary.reminders.length} reminders are ready for review today.`
+    ? `${summary.reminders.length} guided checks are ready for review today.`
     : "Your search snapshot is calm right now. Keep the momentum going.";
 
   function handleQuickImportSubmit(event) {
@@ -263,13 +280,13 @@ export default function Home({
   }
 
   function handleReminderAction(intent) {
-    if (intent === "follow-ups") {
-      onReviewFollowUps?.();
+    if (intent?.focusImport) {
+      onQuickImport?.(quickImportInput.trim() || "");
       return;
     }
 
-    if (intent === "import") {
-      onQuickImport?.(quickImportInput.trim() || "");
+    if (intent) {
+      onOpenApplications?.(intent);
     }
   }
 
@@ -321,9 +338,30 @@ export default function Home({
                 if (definition.id === "offers") {
                   onOpenOffers?.();
                 } else if (definition.id === "followUps") {
-                  onReviewFollowUps?.();
+                  onOpenApplications?.({
+                    focusMode: "follow-ups",
+                    pageSize: 100,
+                    sortOrder: "asc",
+                  });
                 } else if (definition.id === "interviews") {
-                  onOpenApplications?.({ statusFilter: "interview" });
+                  onOpenApplications?.({
+                    statusFilter: "interview",
+                    focusMode: "stale-interviews",
+                    pageSize: 100,
+                    sortOrder: "asc",
+                  });
+                } else if (definition.id === "today") {
+                  onOpenApplications?.({
+                    focusMode: "created-today",
+                    sortBy: "createdAt",
+                    sortOrder: "desc",
+                    pageSize: 100,
+                  });
+                } else if (definition.id === "active") {
+                  onOpenApplications?.({
+                    focusMode: "active-pipeline",
+                    pageSize: 100,
+                  });
                 } else {
                   onOpenApplications?.();
                 }
@@ -374,15 +412,27 @@ export default function Home({
               </div>
 
               <div className="home-aging-grid">
-                <button type="button" className="home-aging-card" onClick={() => onReviewFollowUps?.()}>
+                <button
+                  type="button"
+                  className="home-aging-card"
+                  onClick={() => onOpenApplications?.({ focusMode: "aging-7-13", pageSize: 100, sortOrder: "asc" })}
+                >
                   <span className="home-aging-label">1 Week</span>
                   <strong className="mono-text">{summary.aging.oneWeek}</strong>
                 </button>
-                <button type="button" className="home-aging-card" onClick={() => onReviewFollowUps?.()}>
+                <button
+                  type="button"
+                  className="home-aging-card"
+                  onClick={() => onOpenApplications?.({ focusMode: "aging-14-20", pageSize: 100, sortOrder: "asc" })}
+                >
                   <span className="home-aging-label">2 Weeks</span>
                   <strong className="mono-text">{summary.aging.twoWeeks}</strong>
                 </button>
-                <button type="button" className="home-aging-card" onClick={() => onReviewFollowUps?.()}>
+                <button
+                  type="button"
+                  className="home-aging-card"
+                  onClick={() => onOpenApplications?.({ focusMode: "aging-21-plus", pageSize: 100, sortOrder: "asc" })}
+                >
                   <span className="home-aging-label">3+ Weeks</span>
                   <strong className="mono-text">{summary.aging.threeWeeks}</strong>
                 </button>
@@ -439,7 +489,17 @@ export default function Home({
                   <strong>Save an Application</strong>
                   <span>Jump straight into the capture flow.</span>
                 </button>
-                <button type="button" className="home-action-card" onClick={() => onReviewFollowUps?.()}>
+                <button
+                  type="button"
+                  className="home-action-card"
+                  onClick={() =>
+                    onOpenApplications?.({
+                      focusMode: "follow-ups",
+                      pageSize: 100,
+                      sortOrder: "asc",
+                    })
+                  }
+                >
                   <strong>Review Follow-Ups</strong>
                   <span>See aging items and stalled conversations.</span>
                 </button>

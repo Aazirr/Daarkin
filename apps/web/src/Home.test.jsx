@@ -99,4 +99,32 @@ describe("Home", () => {
 
     expect(onQuickImport).toHaveBeenCalledWith("https://example.com/jobs/frontend");
   });
+
+  it("routes follow-up guidance into applications with a guided intent", async () => {
+    const onOpenApplications = vi.fn();
+
+    render(
+      <Home
+        onOpenApplications={onOpenApplications}
+        onOpenBoard={vi.fn()}
+        onOpenOffers={vi.fn()}
+        onQuickImport={vi.fn()}
+        onReviewFollowUps={vi.fn()}
+      />
+    );
+
+    await waitFor(() => {
+      expect(fetchApplications).toHaveBeenCalled();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /needs follow-up/i }));
+
+    expect(onOpenApplications).toHaveBeenCalledWith(
+      expect.objectContaining({
+        focusMode: "follow-ups",
+        pageSize: 100,
+        sortOrder: "asc",
+      })
+    );
+  });
 });

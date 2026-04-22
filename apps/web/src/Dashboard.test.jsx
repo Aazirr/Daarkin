@@ -250,6 +250,53 @@ describe("Dashboard interactions", () => {
     expect(companyInput).toBeInTheDocument();
   });
 
+  it("applies guided follow-up focus from navigation intent", async () => {
+    fetchApplications.mockResolvedValue(
+      buildResponse([
+        {
+          id: "app-1",
+          companyName: "Acme",
+          positionTitle: "Backend Engineer",
+          status: "applied",
+          location: "Remote",
+          applicationUrl: "https://acme.com/jobs/1",
+          appliedAt: "2026-01-01",
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-02T00:00:00.000Z",
+          statusChangedAt: "2026-01-02T00:00:00.000Z",
+        },
+        {
+          id: "app-2",
+          companyName: "Fresh",
+          positionTitle: "Frontend Engineer",
+          status: "applied",
+          location: "Remote",
+          applicationUrl: "https://fresh.com/jobs/2",
+          appliedAt: "2026-04-20",
+          createdAt: "2026-04-20T00:00:00.000Z",
+          updatedAt: "2026-04-22T00:00:00.000Z",
+          statusChangedAt: "2026-04-22T00:00:00.000Z",
+        },
+      ])
+    );
+
+    render(
+      <Dashboard
+        navigationIntent={{
+          focusMode: "follow-ups",
+          pageSize: 100,
+          sortOrder: "asc",
+        }}
+        onNavigationIntentConsumed={vi.fn()}
+      />
+    );
+
+    expect(await screen.findByText(/Follow-Up Review/i)).toBeInTheDocument();
+    expect(screen.getByText(/Showing 1 guided matches/i)).toBeInTheDocument();
+    expect(screen.getByText(/Acme/i)).toBeInTheDocument();
+    expect(screen.queryByText("Fresh")).not.toBeInTheDocument();
+  });
+
   it("treats pasted links as URLs instead of company names", async () => {
     extractFromUrl.mockRejectedValue(new Error("Extraction service unavailable"));
 

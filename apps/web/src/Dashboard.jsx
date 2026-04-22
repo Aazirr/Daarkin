@@ -333,6 +333,106 @@ function buildReminderCards(applications) {
   return reminders;
 }
 
+function getDaysSince(value) {
+  if (!value) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  const now = new Date();
+  const current = new Date(value);
+  const diff = now.getTime() - current.getTime();
+  return Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
+}
+
+function isFollowUpCandidate(application) {
+  const idleDays = getDaysSince(application.updatedAt || application.statusChangedAt || application.createdAt);
+
+  if (application.status === "interview") {
+    return idleDays >= 5;
+  }
+
+  if (application.status === "applied") {
+    return idleDays >= 7;
+  }
+
+  return false;
+}
+
+function matchesFocusMode(application, focusMode) {
+  if (!focusMode) {
+    return true;
+  }
+
+  const ageDays = getDaysSince(application.createdAt || application.appliedAt);
+
+  switch (focusMode) {
+    case "follow-ups":
+      return isFollowUpCandidate(application);
+    case "stale-interviews":
+      return application.status === "interview" && isFollowUpCandidate(application);
+    case "active-pipeline":
+      return application.status !== "rejected";
+    case "created-today":
+      return getDaysSince(application.createdAt) === 0;
+    case "aging-7-13":
+      return application.status !== "rejected" && ageDays >= 7 && ageDays < 14;
+    case "aging-14-20":
+      return application.status !== "rejected" && ageDays >= 14 && ageDays < 21;
+    case "aging-21-plus":
+    case "aging-14-plus":
+      return application.status !== "rejected" && ageDays >= 14;
+    default:
+      return true;
+  }
+}
+
+function getFocusModeMeta(focusMode) {
+  switch (focusMode) {
+    case "follow-ups":
+      return {
+        title: "Follow-Up Review",
+        body: "Showing applications that have gone quiet long enough to deserve a follow-up.",
+      };
+    case "stale-interviews":
+      return {
+        title: "Interview Follow-Ups",
+        body: "These interview-stage applications have had no updates for at least 5 days.",
+      };
+    case "active-pipeline":
+      return {
+        title: "Active Pipeline",
+        body: "Showing all non-rejected opportunities still in motion.",
+      };
+    case "created-today":
+      return {
+        title: "Applications Added Today",
+        body: "This view isolates the opportunities you captured in Daarkin today.",
+      };
+    case "aging-7-13":
+      return {
+        title: "1-Week Aging Bucket",
+        body: "Applications captured 7 to 13 days ago. A good moment to reassess or follow up.",
+      };
+    case "aging-14-20":
+      return {
+        title: "2-Week Aging Bucket",
+        body: "Applications captured 14 to 20 days ago. These likely need the most attention.",
+      };
+    case "aging-21-plus":
+      return {
+        title: "3+ Week Aging Bucket",
+        body: "Applications older than 3 weeks. Review whether to follow up, archive, or move on.",
+      };
+    case "aging-14-plus":
+      return {
+        title: "Aging Applications",
+        body: "Showing applications that are at least 2 weeks old and worth reviewing.",
+      };
+    default:
+      return null;
+  }
+}
+
 export default function Dashboard({ onOpenHome, onOpenOffers, navigationIntent, onNavigationIntentConsumed }) {
   const { user, token, logout } = useAuth();
 
@@ -351,6 +451,7 @@ export default function Dashboard({ onOpenHome, onOpenOffers, navigationIntent, 
 
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [focusMode, setFocusMode] = useState(null);
   const [sortBy, setSortBy] = useState("updatedAt");
   const [sortOrder, setSortOrder] = useState("desc");
   const [page, setPage] = useState(1);
@@ -480,6 +581,24 @@ export default function Dashboard({ onOpenHome, onOpenOffers, navigationIntent, 
       setStatusFilter(navigationIntent.statusFilter);
     }
 
+    setFocusMode(navigationIntent.focusMode || null);
+
+    if (navigationIntent.sortBy) {
+      setSortBy(navigationIntent.sortBy);
+    }
+
+    if (navigationIntent.sortOrder) {
+      setSortOrder(navigationIntent.sortOrder);
+    }
+
+    if (navigationIntent.pageSize) {
+      setPageSize(navigationIntent.pageSize);
+    }
+
+    if (navigationIntent.page) {
+      setPage(navigationIntent.page);
+    }
+
     if (typeof navigationIntent.importSeed === "string") {
       setImportInput(navigationIntent.importSeed);
     }
@@ -497,6 +616,11 @@ export default function Dashboard({ onOpenHome, onOpenOffers, navigationIntent, 
     [applications, selectedApplicationId]
   );
 
+  const visibleApplications = useMemo(
+    () => applications.filter((application) => matchesFocusMode(application, focusMode)),
+    [applications, focusMode]
+  );
+
   const groupedForKanban = useMemo(() => {
     const base = {
       applied: [],
@@ -505,12 +629,34 @@ export default function Dashboard({ onOpenHome, onOpenOffers, navigationIntent, 
       rejected: [],
     };
 
-    applications.forEach((application) => {
+    visibleApplications.forEach((application) => {
       base[application.status].push(application);
     });
 
     return base;
-  }, [applications]);
+  }, [visibleApplications]);
+
+  const focusModeMeta = useMemo(() => getFocusModeMeta(focusMode), [focusMode]);
+  const displayTotal = focusMode ? visibleApplications.length : total;
+  const displayTotalPages = focusMode ? 1 : totalPages;
+  const pipelineCounts = useMemo(() => {
+    if (!focusMode) {
+      return globalStatusCounts;
+    }
+
+    return visibleApplications.reduce(
+      (counts, application) => {
+        counts[application.status] += 1;
+        return counts;
+      },
+      {
+        applied: 0,
+        interview: 0,
+        offer: 0,
+        rejected: 0,
+      }
+    );
+  }, [focusMode, globalStatusCounts, visibleApplications]);
 
   async function loadApplications() {
     setLoading(true);
@@ -830,7 +976,12 @@ export default function Dashboard({ onOpenHome, onOpenOffers, navigationIntent, 
   const reminderCards = useMemo(() => buildReminderCards(applications), [applications]);
 
   function toggleSegmentFilter(status) {
+    setFocusMode(null);
     setStatusFilter((prev) => (prev === status ? "all" : status));
+  }
+
+  function clearFocusMode() {
+    setFocusMode(null);
   }
 
   function handleNotificationPermission() {
@@ -1387,8 +1538,9 @@ export default function Dashboard({ onOpenHome, onOpenOffers, navigationIntent, 
     );
   }
 
-  const showSearchEmpty = !loading && applications.length === 0 && searchText.trim().length > 0;
-  const showFirstRunEmpty = !loading && total === 0 && !searchText.trim();
+  const showSearchEmpty = !loading && visibleApplications.length === 0 && searchText.trim().length > 0;
+  const showFirstRunEmpty = !loading && total === 0 && !searchText.trim() && !focusMode;
+  const showGuidedEmpty = !loading && visibleApplications.length === 0 && !searchText.trim() && Boolean(focusMode);
   const isBoardView = viewMode === "kanban";
 
   function openApplicationsView() {
@@ -1510,8 +1662,8 @@ export default function Dashboard({ onOpenHome, onOpenOffers, navigationIntent, 
 
           <div className="pipeline-bar" role="img" aria-label="Application status distribution">
             {APPLICATION_STATUSES.map((status) => {
-              const count = metrics.counts[status];
-              const denominator = applications.length || 1;
+              const count = pipelineCounts[status];
+              const denominator = visibleApplications.length || 1;
               const width = Math.max(6, (count / denominator) * 100);
               const active = statusFilter === status;
               return (
@@ -1843,27 +1995,51 @@ export default function Dashboard({ onOpenHome, onOpenOffers, navigationIntent, 
                   ref={searchInputRef}
                   className="input"
                   value={searchText}
-                  onChange={(event) => setSearchText(event.target.value)}
+                  onChange={(event) => {
+                    clearFocusMode();
+                    setSearchText(event.target.value);
+                  }}
                   placeholder="Search company, role, location, notes"
                 />
                 {searchHintVisible && <span className="search-hint">⌘K or / to search</span>}
               </div>
-              <select className="input" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+              <select className="input" value={statusFilter} onChange={(event) => {
+                clearFocusMode();
+                setStatusFilter(event.target.value);
+              }}>
                 <option value="all">All statuses</option>
                 {APPLICATION_STATUSES.map((status) => (
                   <option key={status} value={status}>{STATUS_LABELS[status]}</option>
                 ))}
               </select>
-              <select className="input" value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
+              <select className="input" value={sortBy} onChange={(event) => {
+                clearFocusMode();
+                setSortBy(event.target.value);
+              }}>
                 {SORT_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
               </select>
-              <select className="input" value={sortOrder} onChange={(event) => setSortOrder(event.target.value)}>
+              <select className="input" value={sortOrder} onChange={(event) => {
+                clearFocusMode();
+                setSortOrder(event.target.value);
+              }}>
                 <option value="desc">Descending</option>
                 <option value="asc">Ascending</option>
               </select>
             </div>
+
+            {focusModeMeta ? (
+              <div className="panel focus-banner" role="status" aria-label={focusModeMeta.title}>
+                <div>
+                  <p className="metric-label">{focusModeMeta.title}</p>
+                  <p className="muted-text">{focusModeMeta.body}</p>
+                </div>
+                <button type="button" className="btn btn-subtle" onClick={clearFocusMode}>
+                  Clear Guided View
+                </button>
+              </div>
+            ) : null}
 
             {loading ? (
               <div className="skeleton-list" aria-label="Loading applications">
@@ -1911,9 +2087,16 @@ export default function Dashboard({ onOpenHome, onOpenOffers, navigationIntent, 
                   Quick add "{searchText}"
                 </button>
               </div>
+            ) : showGuidedEmpty ? (
+              <div className="empty-state">
+                <p>No applications match this guided view right now.</p>
+                <button type="button" className="btn btn-primary" onClick={clearFocusMode}>
+                  Return to All Applications
+                </button>
+              </div>
             ) : viewMode === "list" ? (
               <div className="application-list list-transition">
-                {applications.map(renderApplicationCard)}
+                {visibleApplications.map(renderApplicationCard)}
               </div>
             ) : (
               <div className="kanban-grid">
@@ -1933,17 +2116,22 @@ export default function Dashboard({ onOpenHome, onOpenOffers, navigationIntent, 
             )}
 
             <div className="pagination-row">
-              <span className="muted-text">Showing {pageSize} per page ({total} total)</span>
+              <span className="muted-text">
+                {focusMode ? `Showing ${displayTotal} guided matches` : `Showing ${pageSize} per page (${displayTotal} total)`}
+              </span>
               <div className="row-actions">
-                <select className="input input-small" value={pageSize} onChange={(event) => setPageSize(Number(event.target.value))}>
+                <select className="input input-small" value={pageSize} onChange={(event) => {
+                  clearFocusMode();
+                  setPageSize(Number(event.target.value));
+                }} disabled={Boolean(focusMode)}>
                   <option value={5}>5</option>
                   <option value={10}>10</option>
                   <option value={20}>20</option>
                   <option value={50}>50</option>
                 </select>
-                <button type="button" className="btn btn-subtle" disabled={page <= 1} onClick={() => setPage((prev) => prev - 1)}>Prev</button>
-                <span className="muted-text mono-text">Page {page} / {totalPages}</span>
-                <button type="button" className="btn btn-subtle" disabled={page >= totalPages} onClick={() => setPage((prev) => prev + 1)}>Next</button>
+                <button type="button" className="btn btn-subtle" disabled={focusMode || page <= 1} onClick={() => setPage((prev) => prev - 1)}>Prev</button>
+                <span className="muted-text mono-text">Page {focusMode ? 1 : page} / {displayTotalPages}</span>
+                <button type="button" className="btn btn-subtle" disabled={focusMode || page >= displayTotalPages} onClick={() => setPage((prev) => prev + 1)}>Next</button>
               </div>
             </div>
           </section>
