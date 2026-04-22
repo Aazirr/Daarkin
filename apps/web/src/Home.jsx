@@ -1,7 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "./hooks/useAuth";
+import { AppMobileNav, AppSidebar } from "./components/AppNavigation.jsx";
 import { fetchApplications, setAuthToken as setApplicationsAuthToken } from "./services/applications-api.js";
 import { fetchUpcomingEvents, setAuthToken as setEventsAuthToken } from "./services/events-api.js";
+import {
+  addDaysToAppDateKey,
+  formatDateTimeInAppTimeZone,
+  getAppDateKey,
+  getAppDayDifference,
+  getAppHour,
+  getWeekdayLabelInAppTimeZone,
+} from "./utils/app-timezone.js";
 
 const STAT_DEFINITIONS = [
   {
@@ -31,19 +40,8 @@ const STAT_DEFINITIONS = [
   },
 ];
 
-function startOfDay(value) {
-  const next = new Date(value);
-  next.setHours(0, 0, 0, 0);
-  return next;
-}
-
 function daysSince(value, now = new Date()) {
-  if (!value) {
-    return Number.POSITIVE_INFINITY;
-  }
-
-  const diff = startOfDay(now).getTime() - startOfDay(value).getTime();
-  return Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
+  return getAppDayDifference(value, now);
 }
 
 function getDisplayName(user) {
@@ -64,7 +62,7 @@ function getDisplayName(user) {
 }
 
 function getGreeting() {
-  const hour = new Date().getHours();
+  const hour = getAppHour();
   if (hour < 12) {
     return "Good morning";
   }
@@ -75,13 +73,11 @@ function getGreeting() {
 }
 
 function buildActivitySeries(applications) {
-  const today = startOfDay(new Date());
   const days = Array.from({ length: 7 }, (_, index) => {
-    const day = new Date(today);
-    day.setDate(today.getDate() - (6 - index));
+    const key = addDaysToAppDateKey(getAppDateKey(), index - 6);
     return {
-      key: day.toISOString().slice(0, 10),
-      label: day.toLocaleDateString("en-US", { weekday: "short" }),
+      key,
+      label: getWeekdayLabelInAppTimeZone(key),
       count: 0,
     };
   });
@@ -89,7 +85,7 @@ function buildActivitySeries(applications) {
   const dayMap = new Map(days.map((day) => [day.key, day]));
 
   applications.forEach((application) => {
-    const createdKey = application.createdAt?.slice(0, 10);
+    const createdKey = getAppDateKey(application.createdAt);
     if (!createdKey || !dayMap.has(createdKey)) {
       return;
     }
@@ -100,9 +96,7 @@ function buildActivitySeries(applications) {
 }
 
 function getRelativeEventLabel(startsAt) {
-  const today = startOfDay(new Date()).getTime();
-  const eventDay = startOfDay(startsAt).getTime();
-  const diffDays = Math.round((eventDay - today) / (1000 * 60 * 60 * 24));
+  const diffDays = getAppDayDifference(new Date(), startsAt);
 
   if (diffDays === 0) {
     return "today";
@@ -115,13 +109,11 @@ function getRelativeEventLabel(startsAt) {
 
 function buildHomeSummary(applications, totalCount, upcomingEvents) {
   const now = new Date();
-  const todayKey = now.toISOString().slice(0, 10);
+  const todayKey = getAppDateKey(now);
   const activeApplications = applications.filter((application) => application.status !== "rejected");
   const interviews = applications.filter((application) => application.status === "interview");
   const offers = applications.filter((application) => application.status === "offer");
-  const todayApplications = applications.filter(
-    (application) => application.createdAt?.slice(0, 10) === todayKey
-  );
+  const todayApplications = applications.filter((application) => getAppDateKey(application.createdAt) === todayKey);
 
   const aging = {
     oneWeek: 0,
@@ -169,12 +161,7 @@ function buildHomeSummary(applications, totalCount, upcomingEvents) {
     reminders.unshift({
       id: `upcoming-${event.id}`,
       title: `Interview ${relativeLabel} with ${event.companyName}`,
-      body: `${event.title} is scheduled for ${new Date(event.startsAt).toLocaleString("en-US", {
-        month: "short",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-      })}.`,
+      body: `${event.title} is scheduled for ${formatDateTimeInAppTimeZone(event.startsAt)}.`,
       action: "Open application",
       intent: { statusFilter: "interview", pageSize: 100, sortOrder: "asc" },
     });
@@ -245,12 +232,17 @@ export default function Home({
   onReviewFollowUps,
 }) {
   const { user, token, logout } = useAuth();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem("sidebarCollapsed") === "1");
   const [applications, setApplications] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [quickImportInput, setQuickImportInput] = useState("");
   const [upcomingEvents, setUpcomingEvents] = useState([]);
+
+  useEffect(() => {
+    localStorage.setItem("sidebarCollapsed", sidebarCollapsed ? "1" : "0");
+  }, [sidebarCollapsed]);
 
   useEffect(() => {
     setApplicationsAuthToken(token || null);
@@ -335,24 +327,15 @@ export default function Home({
   }
 
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <div className="home-sidebar-heading">Daarkin</div>
-        <nav className="sidebar-nav">
-          <button type="button" className="nav-item active" title="Home">
-            Home
-          </button>
-          <button type="button" className="nav-item" title="Applications" onClick={() => onOpenApplications?.()}>
-            Applications
-          </button>
-          <button type="button" className="nav-item" title="Board" onClick={() => onOpenBoard?.()}>
-            Board
-          </button>
-          <button type="button" className="nav-item" title="Offers" onClick={() => onOpenOffers?.()}>
-            Offers
-          </button>
-        </nav>
-      </aside>
+    <div className={`app-shell ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
+      <AppSidebar
+        current="home"
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}
+        onOpenApplications={() => onOpenApplications?.()}
+        onOpenBoard={() => onOpenBoard?.()}
+        onOpenOffers={() => onOpenOffers?.()}
+      />
 
       <main className="app-content home-content">
         <header className="app-header home-header">
@@ -581,6 +564,14 @@ export default function Home({
           </div>
         </section>
       </main>
+
+      <AppMobileNav
+        current="home"
+        onOpenHome={() => undefined}
+        onOpenApplications={() => onOpenApplications?.()}
+        onOpenBoard={() => onOpenBoard?.()}
+        onOpenOffers={() => onOpenOffers?.()}
+      />
     </div>
   );
 }

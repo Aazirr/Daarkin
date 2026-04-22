@@ -5,6 +5,7 @@ import { OfferComparisonTable } from "./components/OfferComparisonTable.jsx";
 import { OfferSelector } from "./components/OfferSelector.jsx";
 import { ScoringWeightsEditor } from "./components/ScoringWeightsEditor.jsx";
 import { OfferComparison } from "./components/OfferComparison.jsx";
+import { AppMobileNav, AppSidebar } from "./components/AppNavigation.jsx";
 
 export default function Offers({ onOpenHome, onOpenApplications, onOpenBoard }) {
   const { user, token } = useAuth();
@@ -21,12 +22,10 @@ export default function Offers({ onOpenHome, onOpenApplications, onOpenBoard }) 
     localStorage.setItem("sidebarCollapsed", sidebarCollapsed ? "1" : "0");
   }, [sidebarCollapsed]);
 
-  // Set auth token when available
   useEffect(() => {
     setOffersAuthToken(token || null);
   }, [token]);
 
-  // Fetch offers and weights
   useEffect(() => {
     const loadOffers = async () => {
       try {
@@ -51,10 +50,7 @@ export default function Offers({ onOpenHome, onOpenApplications, onOpenBoard }) 
 
   const handleWeightsUpdate = async (updatedWeights) => {
     try {
-      // Update local weights
       setWeights(updatedWeights);
-      
-      // Re-fetch offers with new weights to get updated scores
       const data = await fetchOffers();
       setOffers(data.offers || []);
       console.info("[Offers] Weights updated, offers recalculated", { weights: updatedWeights });
@@ -63,7 +59,6 @@ export default function Offers({ onOpenHome, onOpenApplications, onOpenBoard }) 
     }
   };
 
-  // Find the top offer (highest score)
   const topOfferId = offers.length > 0
     ? offers.reduce((max, offer) => {
         if (!max || (offer.score !== null && (max.score === null || offer.score > max.score))) {
@@ -99,26 +94,14 @@ export default function Offers({ onOpenHome, onOpenApplications, onOpenBoard }) 
 
   return (
     <div className={`app-shell ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
-      <aside className="sidebar">
-        <button type="button" className="sidebar-toggle" onClick={() => setSidebarCollapsed((prev) => !prev)}>
-          {sidebarCollapsed ? "»" : "«"}
-        </button>
-
-        <nav className="sidebar-nav">
-          <button type="button" className="nav-item" title="Home" onClick={() => onOpenHome?.()}>
-            Home {!sidebarCollapsed && <span>Home</span>}
-          </button>
-          <button type="button" className="nav-item" title="Applications" onClick={() => onOpenApplications?.()}>
-            Apps {!sidebarCollapsed && <span>Applications</span>}
-          </button>
-          <button type="button" className="nav-item" title="Board" onClick={() => onOpenBoard?.()}>
-            Board {!sidebarCollapsed && <span>Board</span>}
-          </button>
-          <button type="button" className="nav-item active" title="Offers">
-            Offers {!sidebarCollapsed && <span>Offers</span>}
-          </button>
-        </nav>
-      </aside>
+      <AppSidebar
+        current="offers"
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}
+        onOpenHome={() => onOpenHome?.()}
+        onOpenApplications={() => onOpenApplications?.()}
+        onOpenBoard={() => onOpenBoard?.()}
+      />
 
       <main className="app-content">
         <div className="app-header">
@@ -201,6 +184,13 @@ export default function Offers({ onOpenHome, onOpenApplications, onOpenBoard }) 
           />
         )}
       </main>
+
+      <AppMobileNav
+        current="offers"
+        onOpenHome={() => onOpenHome?.()}
+        onOpenApplications={() => onOpenApplications?.()}
+        onOpenBoard={() => onOpenBoard?.()}
+      />
     </div>
   );
 }

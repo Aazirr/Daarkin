@@ -100,50 +100,134 @@ a:focus-visible {
   height: 100vh;
 }
 
+.sidebar-brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.sidebar-brand-mark {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(200, 146, 42, 0.35);
+  background: linear-gradient(180deg, rgba(200, 146, 42, 0.18), rgba(139, 36, 36, 0.18));
+  color: var(--text-primary);
+  font-family: "JetBrains Mono", "Consolas", monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.sidebar-brand-copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.sidebar-brand-copy strong {
+  font-family: "Fraunces", "Georgia", serif;
+  font-size: 1rem;
+  letter-spacing: 0.03em;
+}
+
+.sidebar-brand-copy span {
+  color: var(--text-tertiary);
+  font-size: 0.78rem;
+}
+
 .sidebar-toggle {
-  width: 100%;
+  width: 36px;
+  height: 36px;
   border: 1px solid var(--border-default);
-  border-radius: var(--radius-sm);
+  border-radius: 10px;
   background: var(--surface-card);
   color: var(--text-secondary);
-  padding: 6px;
+  padding: 0;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .sidebar-nav {
-  margin-top: var(--space-4);
+  margin-top: var(--space-3);
   display: grid;
   gap: var(--space-2);
 }
 
-.home-sidebar-heading {
-  color: var(--text-primary);
-  font-family: "Fraunces", "Georgia", serif;
-  font-size: 1.2rem;
-  letter-spacing: 0.03em;
+.sidebar-section-label {
+  margin-top: var(--space-4);
+  margin-bottom: var(--space-2);
+  color: var(--text-tertiary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
+  gap: 10px;
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
   background: transparent;
   color: var(--text-secondary);
-  padding: 8px;
+  padding: 10px;
   cursor: pointer;
+  text-align: left;
+  transition: background var(--motion-base) ease, border-color var(--motion-base) ease, color var(--motion-base) ease,
+    transform var(--motion-fast) ease;
 }
 
 .nav-item:hover {
   border-color: var(--border-default);
   background: #211819;
+  color: var(--text-primary);
+  transform: translateX(1px);
 }
 
 .nav-item.active {
   color: var(--text-primary);
-  border-color: #c8922a;
-  background: #2a2114;
+  border-color: rgba(200, 146, 42, 0.7);
+  background: linear-gradient(180deg, rgba(42, 33, 20, 0.96), rgba(34, 25, 17, 0.96));
+  box-shadow: inset 0 0 0 1px rgba(200, 146, 42, 0.1);
+}
+
+.nav-item-kicker {
+  min-width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-tertiary);
+  font-family: "JetBrains Mono", "Consolas", monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.nav-item.active .nav-item-kicker {
+  color: var(--border-focus);
+  border-color: rgba(200, 146, 42, 0.3);
+  background: rgba(200, 146, 42, 0.08);
+}
+
+.nav-item-label {
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .app-content {
@@ -1514,17 +1598,36 @@ a:focus-visible {
     left: 0;
     right: 0;
     bottom: 0;
-    grid-template-columns: repeat(5, 1fr);
+    grid-auto-columns: 1fr;
+    grid-auto-flow: column;
     border-top: 1px solid var(--border-default);
-    background: var(--surface-card);
+    background: rgba(23, 17, 18, 0.96);
+    backdrop-filter: blur(12px);
     z-index: 80;
     padding: 6px;
+    gap: 6px;
   }
 
   .mobile-bottom-nav .nav-item {
     justify-content: center;
-    border: none;
-    min-height: 44px;
+    border-radius: 12px;
+    min-height: 52px;
+    padding: 8px 6px;
+    gap: 6px;
+    flex-direction: column;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+  }
+
+  .mobile-bottom-nav .nav-item-kicker {
+    min-width: 28px;
+    height: 24px;
+    font-size: 0.65rem;
+  }
+
+  .mobile-nav-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
   }
 
   .home-stats-grid,

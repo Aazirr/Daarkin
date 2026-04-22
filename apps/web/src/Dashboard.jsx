@@ -28,6 +28,15 @@ import {
   setAuthToken as setEventsAuthToken,
   updateApplicationEvent,
 } from "./services/events-api.js";
+import { AppSidebar } from "./components/AppNavigation.jsx";
+import {
+  appDateTimeLocalToIso,
+  formatDateInAppTimeZone,
+  formatDateTimeInAppTimeZone,
+  getAppDateKey,
+  getAppDayDifference,
+  toDateTimeLocalValueInAppTimeZone,
+} from "./utils/app-timezone.js";
 
 const STATUS_LABELS = {
   applied: "Applied",
@@ -71,42 +80,16 @@ const EMPTY_EVENT_FORM = {
   notes: "",
 };
 
-const dateFormatter = new Intl.DateTimeFormat("en", {
-  month: "short",
-  day: "numeric",
-  year: "numeric",
-});
-
 function formatDate(value) {
-  if (!value) {
-    return "Not set";
-  }
-  return dateFormatter.format(new Date(value));
+  return formatDateInAppTimeZone(value);
 }
 
 function formatDateTime(value) {
-  if (!value) {
-    return "Not scheduled";
-  }
-
-  return new Intl.DateTimeFormat("en", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(new Date(value));
+  return formatDateTimeInAppTimeZone(value);
 }
 
 function toDateTimeLocalValue(value) {
-  if (!value) {
-    return "";
-  }
-
-  const date = new Date(value);
-  const timezoneOffset = date.getTimezoneOffset();
-  const localDate = new Date(date.getTime() - timezoneOffset * 60 * 1000);
-  return localDate.toISOString().slice(0, 16);
+  return toDateTimeLocalValueInAppTimeZone(value);
 }
 
 function toTitleWords(value) {
@@ -149,7 +132,7 @@ function parseImportInput(rawInput) {
     throw new Error("Paste a job URL, job text, or company name first.");
   }
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getAppDateKey();
 
   const detectedUrl = findFirstUrl(input);
 
@@ -195,10 +178,7 @@ function normalizePayload(value) {
 }
 
 function daysBetween(start, end) {
-  const startDate = new Date(start);
-  const endDate = new Date(end);
-  const diff = endDate.getTime() - startDate.getTime();
-  return Math.max(0, Math.round(diff / (1000 * 60 * 60 * 24)));
+  return getAppDayDifference(start, end);
 }
 
 function getQueryAppId() {
@@ -328,8 +308,6 @@ function buildCsv(applications, notesByApp) {
 }
 
 function buildReminderCards(applications) {
-  const now = Date.now();
-  const dayMs = 24 * 60 * 60 * 1000;
   const reminders = [];
 
   const newestCreatedAt = applications
@@ -337,7 +315,7 @@ function buildReminderCards(applications) {
     .filter((value) => Number.isFinite(value))
     .sort((a, b) => b - a)[0];
 
-  if (!newestCreatedAt || now - newestCreatedAt > 7 * dayMs) {
+  if (!newestCreatedAt || getAppDayDifference(new Date(newestCreatedAt)) >= 7) {
     reminders.push({
       id: "inactive-search",
       title: "Your search has been quiet",
@@ -346,7 +324,9 @@ function buildReminderCards(applications) {
   }
 
   const staleInterview = applications.find(
-    (application) => application.status === "interview" && application.updatedAt && now - new Date(application.updatedAt).getTime() > 5 * dayMs
+    (application) =>
+      application.status === "interview" &&
+      getDaysSince(application.updatedAt || application.statusChangedAt || application.createdAt) >= 5
   );
 
   if (staleInterview) {
@@ -358,7 +338,9 @@ function buildReminderCards(applications) {
   }
 
   const staleOffer = applications.find(
-    (application) => application.status === "offer" && application.updatedAt && now - new Date(application.updatedAt).getTime() > 10 * dayMs
+    (application) =>
+      application.status === "offer" &&
+      getDaysSince(application.updatedAt || application.statusChangedAt || application.createdAt) >= 10
   );
 
   if (staleOffer) {
@@ -373,14 +355,7 @@ function buildReminderCards(applications) {
 }
 
 function getDaysSince(value) {
-  if (!value) {
-    return Number.POSITIVE_INFINITY;
-  }
-
-  const now = new Date();
-  const current = new Date(value);
-  const diff = now.getTime() - current.getTime();
-  return Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
+  return getAppDayDifference(value);
 }
 
 function isFollowUpCandidate(application) {
@@ -1065,7 +1040,7 @@ export default function Dashboard({ onOpenHome, onOpenOffers, navigationIntent, 
 
     const link = document.createElement("a");
     link.href = url;
-    link.download = `applications-export-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.download = `applications-export-${getAppDateKey()}.csv`;
     link.click();
 
     URL.revokeObjectURL(url);
@@ -1230,8 +1205,8 @@ export default function Dashboard({ onOpenHome, onOpenOffers, navigationIntent, 
       const payload = {
         eventType: "interview",
         title: eventForm.title.trim() || "Interview",
-        startsAt: new Date(eventForm.startsAt).toISOString(),
-        endsAt: eventForm.endsAt ? new Date(eventForm.endsAt).toISOString() : null,
+        startsAt: appDateTimeLocalToIso(eventForm.startsAt),
+        endsAt: eventForm.endsAt ? appDateTimeLocalToIso(eventForm.endsAt) : null,
         notes: eventForm.notes.trim(),
       };
 
@@ -1306,7 +1281,7 @@ export default function Dashboard({ onOpenHome, onOpenOffers, navigationIntent, 
       positionTitle: extractedData.positionTitle || "",
       location: extractedData.location || "",
       applicationUrl: extractedData.sourceUrl || "",
-      appliedAt: new Date().toISOString().slice(0, 10),
+      appliedAt: getAppDateKey(),
     };
 
     setImportDraft(draft);
@@ -1483,7 +1458,7 @@ export default function Dashboard({ onOpenHome, onOpenOffers, navigationIntent, 
       return null;
     }
 
-    return daysBetween(application.statusChangedAt, new Date().toISOString());
+    return daysBetween(application.statusChangedAt, new Date());
   }
 
   function activateQuickAddFromSearch() {
@@ -1496,7 +1471,7 @@ export default function Dashboard({ onOpenHome, onOpenOffers, navigationIntent, 
       ...DEFAULT_IMPORT_DRAFT,
       companyName: toTitleWords(q),
       positionTitle: "Unknown Role",
-      appliedAt: new Date().toISOString().slice(0, 10),
+      appliedAt: getAppDateKey(),
     });
 
     importSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1747,6 +1722,18 @@ export default function Dashboard({ onOpenHome, onOpenOffers, navigationIntent, 
 
   return (
     <div className={`app-shell ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
+      <AppSidebar
+        current={settingsOpen ? "settings" : isBoardView ? "board" : "applications"}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}
+        includeSettings
+        onOpenHome={() => onOpenHome?.()}
+        onOpenApplications={openApplicationsView}
+        onOpenBoard={openBoardView}
+        onOpenOffers={() => onOpenOffers?.()}
+        onOpenSettings={() => setSettingsOpen((prev) => !prev)}
+      />
+      {false && (
       <aside className="sidebar">
         <button type="button" className="sidebar-toggle" onClick={() => setSidebarCollapsed((prev) => !prev)}>
           {sidebarCollapsed ? "»" : "«"}
@@ -1795,6 +1782,7 @@ export default function Dashboard({ onOpenHome, onOpenOffers, navigationIntent, 
           </button>
         </nav>
       </aside>
+      )}
 
       <main className="app-content">
         <header className="app-header">
