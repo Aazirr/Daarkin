@@ -28,7 +28,7 @@ import {
   setAuthToken as setEventsAuthToken,
   updateApplicationEvent,
 } from "./services/events-api.js";
-import { AppSidebar } from "./components/AppNavigation.jsx";
+import { AppMobileNav, AppSidebar } from "./components/AppNavigation.jsx";
 import {
   appDateTimeLocalToIso,
   formatDateInAppTimeZone,
@@ -1733,56 +1733,6 @@ export default function Dashboard({ onOpenHome, onOpenOffers, navigationIntent, 
         onOpenOffers={() => onOpenOffers?.()}
         onOpenSettings={() => setSettingsOpen((prev) => !prev)}
       />
-      {false && (
-      <aside className="sidebar">
-        <button type="button" className="sidebar-toggle" onClick={() => setSidebarCollapsed((prev) => !prev)}>
-          {sidebarCollapsed ? "»" : "«"}
-        </button>
-
-        <nav className="sidebar-nav">
-          <button
-            type="button"
-            className="nav-item"
-            title="Home"
-            onClick={() => onOpenHome?.()}
-          >
-            ⌂ {!sidebarCollapsed && <span>Home</span>}
-          </button>
-          <button
-            type="button"
-            className={`nav-item ${!isBoardView ? "active" : ""}`}
-            title="Applications"
-            onClick={openApplicationsView}
-          >
-            ▦ {!sidebarCollapsed && <span>Applications</span>}
-          </button>
-          <button
-            type="button"
-            className={`nav-item ${isBoardView ? "active" : ""}`}
-            title="Board"
-            onClick={openBoardView}
-          >
-            ☰ {!sidebarCollapsed && <span>Board</span>}
-          </button>
-          <button
-            type="button"
-            className="nav-item"
-            title="Offers"
-            onClick={() => onOpenOffers?.()}
-          >
-            ✦ {!sidebarCollapsed && <span>Offers</span>}
-          </button>
-          <button
-            type="button"
-            className={`nav-item ${settingsOpen ? "active" : ""}`}
-            title="Settings"
-            onClick={() => setSettingsOpen((prev) => !prev)}
-          >
-            ⚙ {!sidebarCollapsed && <span>Settings</span>}
-          </button>
-        </nav>
-      </aside>
-      )}
 
       <main className="app-content">
         <header className="app-header">
@@ -2352,13 +2302,15 @@ export default function Dashboard({ onOpenHome, onOpenOffers, navigationIntent, 
       )}
 
       {isMobile && (
-        <div className="mobile-bottom-nav">
-          <button type="button" className="nav-item" onClick={() => onOpenHome?.()}>⌂</button>
-          <button type="button" className={`nav-item ${!isBoardView ? "active" : ""}`} onClick={openApplicationsView}>▦</button>
-          <button type="button" className={`nav-item ${isBoardView ? "active" : ""}`} onClick={openBoardView}>☰</button>
-          <button type="button" className="nav-item" onClick={() => onOpenOffers?.()}>✦</button>
-          <button type="button" className="nav-item" onClick={() => setSettingsOpen((prev) => !prev)}>⚙</button>
-        </div>
+        <AppMobileNav
+          current={settingsOpen ? "settings" : isBoardView ? "board" : "applications"}
+          includeSettings
+          onOpenHome={() => onOpenHome?.()}
+          onOpenApplications={openApplicationsView}
+          onOpenBoard={openBoardView}
+          onOpenOffers={() => onOpenOffers?.()}
+          onOpenSettings={() => setSettingsOpen((prev) => !prev)}
+        />
       )}
 
       {isMobile && (
