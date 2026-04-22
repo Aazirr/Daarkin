@@ -1265,6 +1265,16 @@ a:focus-visible {
   text-align: right;
 }
 
+.scheduled-event-card {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: #1a1314;
+  padding: 10px 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .compensation-modal-scrim {
   position: fixed;
   inset: 0;

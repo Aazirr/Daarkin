@@ -75,13 +75,20 @@ Goal:
 
 Status:
 
-- not started
+- in progress
 
 Dependencies:
 
 - structured event/interview data
 - event editing UI
 - event-aware reminder logic
+
+Delivered so far:
+
+- application event data model and migration
+- event routes for application-level CRUD plus upcoming-events listing
+- Home integration for interview today/tomorrow reminder cards
+- Applications detail-drawer UI for scheduling interview events
 
 ### Phase 10D: Applications Workspace Refinement
 

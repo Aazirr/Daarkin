@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "./hooks/useAuth";
 import { fetchApplications, setAuthToken as setApplicationsAuthToken } from "./services/applications-api.js";
+import { fetchUpcomingEvents, setAuthToken as setEventsAuthToken } from "./services/events-api.js";
 
 const STAT_DEFINITIONS = [
   {
@@ -98,7 +99,21 @@ function buildActivitySeries(applications) {
   return days;
 }
 
-function buildHomeSummary(applications, totalCount) {
+function getRelativeEventLabel(startsAt) {
+  const today = startOfDay(new Date()).getTime();
+  const eventDay = startOfDay(startsAt).getTime();
+  const diffDays = Math.round((eventDay - today) / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) {
+    return "today";
+  }
+  if (diffDays === 1) {
+    return "tomorrow";
+  }
+  return null;
+}
+
+function buildHomeSummary(applications, totalCount, upcomingEvents) {
   const now = new Date();
   const todayKey = now.toISOString().slice(0, 10);
   const activeApplications = applications.filter((application) => application.status !== "rejected");
@@ -116,7 +131,6 @@ function buildHomeSummary(applications, totalCount) {
 
   const reminders = [];
   let staleInterviewCount = 0;
-  let staleAppliedCount = 0;
 
   activeApplications.forEach((application) => {
     const ageInDays = daysSince(application.createdAt || application.appliedAt, now);
@@ -139,9 +153,31 @@ function buildHomeSummary(applications, totalCount) {
         action: "Review follow-up",
         intent: { focusMode: "follow-ups", statusFilter: "interview", pageSize: 100, sortOrder: "asc" },
       });
-    } else if (application.status === "applied" && idleDays >= 7) {
-      staleAppliedCount += 1;
     }
+  });
+
+  upcomingEvents.forEach((event) => {
+    if (event.eventType !== "interview") {
+      return;
+    }
+
+    const relativeLabel = getRelativeEventLabel(event.startsAt);
+    if (!relativeLabel) {
+      return;
+    }
+
+    reminders.unshift({
+      id: `upcoming-${event.id}`,
+      title: `Interview ${relativeLabel} with ${event.companyName}`,
+      body: `${event.title} is scheduled for ${new Date(event.startsAt).toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      })}.`,
+      action: "Open application",
+      intent: { statusFilter: "interview", pageSize: 100, sortOrder: "asc" },
+    });
   });
 
   if (aging.twoWeeks + aging.threeWeeks > 0) {
@@ -198,7 +234,6 @@ function buildHomeSummary(applications, totalCount) {
       .slice(0, 3),
     activity: buildActivitySeries(applications),
     staleInterviewCount,
-    staleAppliedCount,
   };
 }
 
@@ -215,9 +250,11 @@ export default function Home({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [quickImportInput, setQuickImportInput] = useState("");
+  const [upcomingEvents, setUpcomingEvents] = useState([]);
 
   useEffect(() => {
     setApplicationsAuthToken(token || null);
+    setEventsAuthToken(token || null);
   }, [token]);
 
   useEffect(() => {
@@ -228,12 +265,15 @@ export default function Home({
       setError("");
 
       try {
-        const result = await fetchApplications({
-          sortBy: "updatedAt",
-          sortOrder: "desc",
-          page: 1,
-          pageSize: 100,
-        });
+        const [result, upcomingResult] = await Promise.all([
+          fetchApplications({
+            sortBy: "updatedAt",
+            sortOrder: "desc",
+            page: 1,
+            pageSize: 100,
+          }),
+          fetchUpcomingEvents(2),
+        ]);
 
         if (cancelled) {
           return;
@@ -241,6 +281,7 @@ export default function Home({
 
         setApplications(result.data?.applications || []);
         setTotalCount(result.meta?.pagination?.total || 0);
+        setUpcomingEvents(upcomingResult.events || []);
       } catch (loadError) {
         if (!cancelled) {
           setError(loadError.message || "Failed to load your home summary.");
@@ -261,7 +302,10 @@ export default function Home({
     };
   }, [token]);
 
-  const summary = useMemo(() => buildHomeSummary(applications, totalCount), [applications, totalCount]);
+  const summary = useMemo(
+    () => buildHomeSummary(applications, totalCount, upcomingEvents),
+    [applications, totalCount, upcomingEvents]
+  );
   const displayName = getDisplayName(user);
   const greeting = getGreeting();
   const highestActivity = Math.max(1, ...summary.activity.map((day) => day.count));
@@ -346,7 +390,6 @@ export default function Home({
                 } else if (definition.id === "interviews") {
                   onOpenApplications?.({
                     statusFilter: "interview",
-                    focusMode: "stale-interviews",
                     pageSize: 100,
                     sortOrder: "asc",
                   });

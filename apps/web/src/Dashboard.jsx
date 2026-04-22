@@ -21,6 +21,13 @@ import {
   fetchCompensation,
   setAuthToken as setCompensationAuthToken,
 } from "./services/compensation-api.js";
+import {
+  createApplicationEvent,
+  deleteApplicationEvent,
+  fetchApplicationEvents,
+  setAuthToken as setEventsAuthToken,
+  updateApplicationEvent,
+} from "./services/events-api.js";
 
 const STATUS_LABELS = {
   applied: "Applied",
@@ -57,6 +64,13 @@ const DEFAULT_IMPORT_DRAFT = {
   salaryRange: "",
 };
 
+const EMPTY_EVENT_FORM = {
+  title: "Interview",
+  startsAt: "",
+  endsAt: "",
+  notes: "",
+};
+
 const dateFormatter = new Intl.DateTimeFormat("en", {
   month: "short",
   day: "numeric",
@@ -68,6 +82,31 @@ function formatDate(value) {
     return "Not set";
   }
   return dateFormatter.format(new Date(value));
+}
+
+function formatDateTime(value) {
+  if (!value) {
+    return "Not scheduled";
+  }
+
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+function toDateTimeLocalValue(value) {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+  const timezoneOffset = date.getTimezoneOffset();
+  const localDate = new Date(date.getTime() - timezoneOffset * 60 * 1000);
+  return localDate.toISOString().slice(0, 16);
 }
 
 function toTitleWords(value) {
@@ -483,6 +522,11 @@ export default function Dashboard({ onOpenHome, onOpenOffers, navigationIntent, 
 
   const [compensationByApp, setCompensationByApp] = useState({});
   const [compensationLoadStatus, setCompensationLoadStatus] = useState("idle");
+  const [eventsByApp, setEventsByApp] = useState({});
+  const [eventEditorOpen, setEventEditorOpen] = useState(false);
+  const [eventEditingId, setEventEditingId] = useState(null);
+  const [eventForm, setEventForm] = useState(EMPTY_EVENT_FORM);
+  const [eventStatus, setEventStatus] = useState("idle");
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem("sidebarCollapsed") === "1");
   const [viewMode, setViewMode] = useState(() => localStorage.getItem("dashboardViewMode") || "list");
@@ -566,6 +610,7 @@ export default function Dashboard({ onOpenHome, onOpenOffers, navigationIntent, 
     setAppAuthToken(token || null);
     setNotesAuthToken(token || null);
     setCompensationAuthToken(token || null);
+    setEventsAuthToken(token || null);
   }, [token]);
 
   useEffect(() => {
@@ -856,6 +901,23 @@ export default function Dashboard({ onOpenHome, onOpenOffers, navigationIntent, 
   }, [selectedApplicationId]);
 
   useEffect(() => {
+    if (!selectedApplicationId) {
+      return;
+    }
+
+    async function loadApplicationEvents() {
+      try {
+        const data = await fetchApplicationEvents(selectedApplicationId);
+        setEventsByApp((prev) => ({ ...prev, [selectedApplicationId]: data.events || [] }));
+      } catch (eventError) {
+        setError(eventError.message || "Failed to load events.");
+      }
+    }
+
+    loadApplicationEvents();
+  }, [selectedApplicationId]);
+
+  useEffect(() => {
     function isTypingContext(target) {
       return target instanceof HTMLElement && ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);
     }
@@ -1129,6 +1191,101 @@ export default function Dashboard({ onOpenHome, onOpenOffers, navigationIntent, 
       .finally(() => {
         setSaving(false);
       });
+  }
+
+  function openEventEditor(event = null) {
+    if (event) {
+      setEventEditingId(event.id);
+      setEventForm({
+        title: event.title || "Interview",
+        startsAt: toDateTimeLocalValue(event.startsAt),
+        endsAt: toDateTimeLocalValue(event.endsAt),
+        notes: event.notes || "",
+      });
+    } else {
+      setEventEditingId(null);
+      setEventForm(EMPTY_EVENT_FORM);
+    }
+
+    setEventStatus("idle");
+    setEventEditorOpen(true);
+  }
+
+  async function handleEventSave(event) {
+    event.preventDefault();
+
+    if (!selectedApplicationId) {
+      return;
+    }
+
+    if (!eventForm.startsAt) {
+      setEventStatus("error");
+      setError("Interview start time is required.");
+      return;
+    }
+
+    setEventStatus("saving");
+
+    try {
+      const payload = {
+        eventType: "interview",
+        title: eventForm.title.trim() || "Interview",
+        startsAt: new Date(eventForm.startsAt).toISOString(),
+        endsAt: eventForm.endsAt ? new Date(eventForm.endsAt).toISOString() : null,
+        notes: eventForm.notes.trim(),
+      };
+
+      let savedEvent;
+      if (eventEditingId) {
+        const data = await updateApplicationEvent(eventEditingId, payload);
+        savedEvent = data.event;
+      } else {
+        const data = await createApplicationEvent(selectedApplicationId, payload);
+        savedEvent = data.event;
+      }
+
+      setEventsByApp((prev) => {
+        const existing = prev[selectedApplicationId] || [];
+        const nextEvents = eventEditingId
+          ? existing.map((item) => (item.id === eventEditingId ? savedEvent : item))
+          : [...existing, savedEvent];
+
+        nextEvents.sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
+        return {
+          ...prev,
+          [selectedApplicationId]: nextEvents,
+        };
+      });
+
+      setEventStatus("saved");
+      setEventEditorOpen(false);
+      setEventEditingId(null);
+      setMessage(eventEditingId ? "Interview schedule updated." : "Interview scheduled.");
+    } catch (saveError) {
+      setEventStatus("error");
+      setError(saveError.message || "Failed to save interview schedule.");
+    }
+  }
+
+  async function handleEventDelete(eventId) {
+    if (!selectedApplicationId) {
+      return;
+    }
+
+    setEventStatus("saving");
+
+    try {
+      await deleteApplicationEvent(eventId);
+      setEventsByApp((prev) => ({
+        ...prev,
+        [selectedApplicationId]: (prev[selectedApplicationId] || []).filter((item) => item.id !== eventId),
+      }));
+      setEventStatus("idle");
+      setMessage("Interview event removed.");
+    } catch (deleteError) {
+      setEventStatus("error");
+      setError(deleteError.message || "Failed to delete event.");
+    }
   }
 
   function closeEditModal() {
@@ -1467,6 +1624,7 @@ export default function Dashboard({ onOpenHome, onOpenOffers, navigationIntent, 
 
   function renderDetailContent() {
     const drawerNotes = notesByApp[selectedApplicationId] || [];
+    const scheduledEvents = eventsByApp[selectedApplicationId] || [];
 
     if (!selectedApplication) {
       return <div className="empty-state">Select an application to open split-pane details.</div>;
@@ -1512,6 +1670,42 @@ export default function Dashboard({ onOpenHome, onOpenOffers, navigationIntent, 
             {noteStatus === "saving" ? "Saving..." : noteStatus === "saved" ? "Saved" : noteStatus === "error" ? "Failed to save" : ""}
           </p>
         </section>
+
+        {(selectedApplication.status === "interview" || scheduledEvents.length > 0) && (
+          <section className="stack-sm">
+            <div className="panel-header">
+              <h3>Interview Schedule</h3>
+              <button type="button" className="btn btn-subtle" onClick={() => openEventEditor()}>
+                Schedule Interview
+              </button>
+            </div>
+            {scheduledEvents.length ? (
+              <div className="stack-sm">
+                {scheduledEvents.map((scheduledEvent) => (
+                  <article key={scheduledEvent.id} className="scheduled-event-card">
+                    <div>
+                      <p className="company-title">{scheduledEvent.title}</p>
+                      <p className="muted-text">{formatDateTime(scheduledEvent.startsAt)}</p>
+                      {scheduledEvent.notes ? <p className="muted-text">{scheduledEvent.notes}</p> : null}
+                    </div>
+                    <div className="row-actions">
+                      <button type="button" className="btn btn-subtle" onClick={() => openEventEditor(scheduledEvent)}>
+                        Edit
+                      </button>
+                      <button type="button" className="btn btn-subtle btn-danger" onClick={() => handleEventDelete(scheduledEvent.id)}>
+                        Delete
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="empty-state">
+                <p>No interview scheduled yet.</p>
+              </div>
+            )}
+          </section>
+        )}
 
         {selectedApplication.status === "offer" && (
           <section className="stack-sm">
@@ -2190,6 +2384,86 @@ export default function Dashboard({ onOpenHome, onOpenOffers, navigationIntent, 
         >
           +
         </button>
+      )}
+
+      {eventEditorOpen && selectedApplication && (
+        <div className="compensation-modal-scrim" role="presentation" onClick={() => eventStatus !== "saving" && setEventEditorOpen(false)}>
+          <div
+            className="compensation-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Interview schedule form"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="panel-header">
+              <h3>{eventEditingId ? "Edit Interview Schedule" : "Schedule Interview"}</h3>
+              <button type="button" className="btn btn-subtle" onClick={() => setEventEditorOpen(false)} disabled={eventStatus === "saving"}>
+                Close
+              </button>
+            </div>
+
+            <form onSubmit={handleEventSave} className="compensation-form">
+              <div className="form-grid">
+                <div className="form-group">
+                  <label htmlFor="event-title">Title</label>
+                  <input
+                    id="event-title"
+                    className="input"
+                    value={eventForm.title}
+                    onChange={(event) => setEventForm((prev) => ({ ...prev, title: event.target.value }))}
+                    disabled={eventStatus === "saving"}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="event-starts-at">Start Time</label>
+                  <input
+                    id="event-starts-at"
+                    type="datetime-local"
+                    className="input"
+                    value={eventForm.startsAt}
+                    onChange={(event) => setEventForm((prev) => ({ ...prev, startsAt: event.target.value }))}
+                    disabled={eventStatus === "saving"}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="event-ends-at">End Time</label>
+                  <input
+                    id="event-ends-at"
+                    type="datetime-local"
+                    className="input"
+                    value={eventForm.endsAt}
+                    onChange={(event) => setEventForm((prev) => ({ ...prev, endsAt: event.target.value }))}
+                    disabled={eventStatus === "saving"}
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="event-notes">Notes</label>
+                <textarea
+                  id="event-notes"
+                  className="input"
+                  rows={4}
+                  value={eventForm.notes}
+                  onChange={(event) => setEventForm((prev) => ({ ...prev, notes: event.target.value }))}
+                  placeholder="Add interview location, prep links, recruiter details, or meeting notes"
+                  disabled={eventStatus === "saving"}
+                />
+              </div>
+
+              <div className="form-actions">
+                <button type="submit" className="btn btn-primary" disabled={eventStatus === "saving"}>
+                  {eventStatus === "saving" ? "Saving..." : "Save Interview"}
+                </button>
+                <button type="button" className="btn btn-subtle" onClick={() => setEventEditorOpen(false)} disabled={eventStatus === "saving"}>
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {contextMenu && (

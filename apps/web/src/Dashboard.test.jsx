@@ -22,9 +22,18 @@ vi.mock("./services/notes-api.js", () => ({
   updateNote: vi.fn(),
 }));
 
+vi.mock("./services/events-api.js", () => ({
+  fetchApplicationEvents: vi.fn(),
+  createApplicationEvent: vi.fn(),
+  updateApplicationEvent: vi.fn(),
+  deleteApplicationEvent: vi.fn(),
+  setAuthToken: vi.fn(),
+}));
+
 import { useAuth } from "./hooks/useAuth";
 import { createApplication, extractFromUrl, fetchApplications, updateApplication } from "./services/applications-api.js";
 import { createNote, fetchNotes, updateNote } from "./services/notes-api.js";
+import { fetchApplicationEvents } from "./services/events-api.js";
 
 function buildResponse(applications) {
   const statusCounts = {
@@ -98,6 +107,10 @@ describe("Dashboard interactions", () => {
 
     fetchNotes.mockResolvedValue({
       notes: [],
+    });
+
+    fetchApplicationEvents.mockResolvedValue({
+      events: [],
     });
   });
 

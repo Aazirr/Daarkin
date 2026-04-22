@@ -201,7 +201,7 @@ Reference: Detailed checklist in `docs/09-ui-ux-redesignplan.md`.
 - [x] Reposition the old dashboard as the `Applications` workspace.
 - [x] Add Home overview modules: greeting, key stats, activity, reminders, aging insight, action cards, quick import.
 - [~] Improve guidance quality by routing Home cards/reminders into precise Applications review states.
-- [ ] Add event-aware reminder intelligence for interview today/tomorrow experiences.
+- [~] Add event-aware reminder intelligence for interview today/tomorrow experiences.
 - [ ] Further refine the Applications workspace around the new Home-first mental model.
 
 **Phase 10 Implementation Phases:**
@@ -216,10 +216,11 @@ Reference: Detailed checklist in `docs/09-ui-ux-redesignplan.md`.
   - Focused Applications review states for follow-ups, stale interviews, active pipeline, today, and aging buckets
   - Guided-state banner and clearer messaging in Applications
   - Remaining work: refine reminder heuristics, improve follow-up prioritization, strengthen guided UI clarity
-- [ ] **10C: Upcoming Event Intelligence** - not started
+- [~] **10C: Upcoming Event Intelligence** - in progress
   - Structured event/interview dates
   - Today/tomorrow reminder cards
   - Event-aware urgency states
+  - Delivered so far: application events model, upcoming events API, Home interview reminders, Applications interview scheduler
 - [ ] **10D: Applications Workspace Refinement** - not started
   - Better guided-state chips or filter chips
   - Clearer Applications hierarchy

@@ -11,8 +11,14 @@ vi.mock("./services/applications-api.js", () => ({
   setAuthToken: vi.fn(),
 }));
 
+vi.mock("./services/events-api.js", () => ({
+  fetchUpcomingEvents: vi.fn(),
+  setAuthToken: vi.fn(),
+}));
+
 import { useAuth } from "./hooks/useAuth";
 import { fetchApplications } from "./services/applications-api.js";
+import { fetchUpcomingEvents } from "./services/events-api.js";
 
 describe("Home", () => {
   beforeEach(() => {
@@ -50,6 +56,10 @@ describe("Home", () => {
           total: 2,
         },
       },
+    });
+
+    fetchUpcomingEvents.mockResolvedValue({
+      events: [],
     });
   });
 
@@ -126,5 +136,31 @@ describe("Home", () => {
         sortOrder: "asc",
       })
     );
+  });
+
+  it("surfaces upcoming interview reminders from real events", async () => {
+    fetchUpcomingEvents.mockResolvedValue({
+      events: [
+        {
+          id: "event-1",
+          eventType: "interview",
+          title: "Hiring manager interview",
+          startsAt: new Date().toISOString(),
+          companyName: "Acme",
+        },
+      ],
+    });
+
+    render(
+      <Home
+        onOpenApplications={vi.fn()}
+        onOpenBoard={vi.fn()}
+        onOpenOffers={vi.fn()}
+        onQuickImport={vi.fn()}
+        onReviewFollowUps={vi.fn()}
+      />
+    );
+
+    expect(await screen.findByText(/Interview today with Acme/i)).toBeInTheDocument();
   });
 });
