@@ -116,6 +116,13 @@ a:focus-visible {
   gap: var(--space-2);
 }
 
+.home-sidebar-heading {
+  color: var(--text-primary);
+  font-family: "Fraunces", "Georgia", serif;
+  font-size: 1.2rem;
+  letter-spacing: 0.03em;
+}
+
 .nav-item {
   display: flex;
   align-items: center;
@@ -148,6 +155,10 @@ a:focus-visible {
   gap: var(--space-4);
 }
 
+.home-content {
+  gap: var(--space-5);
+}
+
 .app-header {
   display: flex;
   justify-content: space-between;
@@ -158,6 +169,15 @@ a:focus-visible {
 .app-title {
   margin: 0;
   font-size: 2rem;
+}
+
+.eyebrow-text {
+  margin: 0 0 8px;
+  color: var(--border-focus);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .company-display {
@@ -344,6 +364,154 @@ a:focus-visible {
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.home-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.stat-card {
+  text-align: left;
+  cursor: pointer;
+}
+
+.stat-card:hover {
+  border-color: var(--border-focus);
+  background: var(--surface-raised);
+}
+
+.home-stat-value {
+  margin: 6px 0;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.home-main-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.9fr);
+  gap: var(--space-4);
+}
+
+.home-chart-panel {
+  min-height: 320px;
+}
+
+.activity-chart {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  align-items: end;
+  gap: var(--space-2);
+  min-height: 240px;
+}
+
+.activity-bar-group {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+}
+
+.activity-bar-rail {
+  width: 100%;
+  min-height: 170px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, #161012 0%, #100c0d 100%);
+  padding: 8px;
+  display: flex;
+  align-items: flex-end;
+}
+
+.activity-bar-fill {
+  width: 100%;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #d4a73f 0%, #c8922a 100%);
+  min-height: 8px;
+}
+
+.activity-bar-label,
+.activity-bar-count {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.home-aging-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.home-aging-card,
+.home-action-card {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.home-aging-card {
+  padding: var(--space-3);
+  display: grid;
+  gap: 6px;
+}
+
+.home-aging-card:hover,
+.home-action-card:hover,
+.home-reminder-card:hover {
+  border-color: var(--border-focus);
+}
+
+.home-aging-label {
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.home-reminder-card {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, #1c1516 0%, #161012 100%);
+  padding: var(--space-3);
+  display: grid;
+  gap: var(--space-2);
+}
+
+.home-reminder-card h3,
+.home-reminder-card p {
+  margin: 0;
+}
+
+.home-reminder-card p {
+  color: var(--text-secondary);
+}
+
+.home-actions-grid {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.home-action-card {
+  padding: var(--space-3);
+  display: grid;
+  gap: 6px;
+}
+
+.home-action-card strong {
+  font-size: 1rem;
+}
+
+.home-action-card span {
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+}
+
+.home-quick-import {
+  display: grid;
   gap: var(--space-3);
 }
 
@@ -1236,6 +1404,11 @@ a:focus-visible {
     grid-template-columns: 1fr;
   }
 
+  .home-stats-grid,
+  .home-main-grid {
+    grid-template-columns: 1fr;
+  }
+
   .filter-grid {
     grid-template-columns: 1fr 1fr;
   }
@@ -1316,7 +1489,7 @@ a:focus-visible {
     left: 0;
     right: 0;
     bottom: 0;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     border-top: 1px solid var(--border-default);
     background: var(--surface-card);
     z-index: 80;
@@ -1327,6 +1500,15 @@ a:focus-visible {
     justify-content: center;
     border: none;
     min-height: 44px;
+  }
+
+  .home-stats-grid,
+  .home-aging-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .activity-chart {
+    grid-template-columns: repeat(7, minmax(30px, 1fr));
   }
 
   .mobile-fab {

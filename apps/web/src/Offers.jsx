@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "./hooks/useAuth";
-import { fetchOffers, setAuthToken as setOffersAuthToken, fetchScoringWeights } from "./services/offers-api.js";
+import { fetchOffers, setAuthToken as setOffersAuthToken } from "./services/offers-api.js";
 import { OfferComparisonTable } from "./components/OfferComparisonTable.jsx";
 import { OfferSelector } from "./components/OfferSelector.jsx";
 import { ScoringWeightsEditor } from "./components/ScoringWeightsEditor.jsx";
 import { OfferComparison } from "./components/OfferComparison.jsx";
 
-export default function Offers({ onBack, onOpenBoard }) {
+export default function Offers({ onOpenHome, onOpenApplications, onOpenBoard }) {
   const { user, token } = useAuth();
   const [offers, setOffers] = useState([]);
   const [selectedOfferIds, setSelectedOfferIds] = useState([]);
@@ -105,14 +105,17 @@ export default function Offers({ onBack, onOpenBoard }) {
         </button>
 
         <nav className="sidebar-nav">
-          <button type="button" className="nav-item" title="Dashboard" onClick={() => onBack?.()}>
-            ▦ {!sidebarCollapsed && <span>Dashboard</span>}
+          <button type="button" className="nav-item" title="Home" onClick={() => onOpenHome?.()}>
+            Home {!sidebarCollapsed && <span>Home</span>}
+          </button>
+          <button type="button" className="nav-item" title="Applications" onClick={() => onOpenApplications?.()}>
+            Apps {!sidebarCollapsed && <span>Applications</span>}
           </button>
           <button type="button" className="nav-item" title="Board" onClick={() => onOpenBoard?.()}>
-            ☰ {!sidebarCollapsed && <span>Board</span>}
+            Board {!sidebarCollapsed && <span>Board</span>}
           </button>
           <button type="button" className="nav-item active" title="Offers">
-            ✦ {!sidebarCollapsed && <span>Offers</span>}
+            Offers {!sidebarCollapsed && <span>Offers</span>}
           </button>
         </nav>
       </aside>
@@ -130,10 +133,10 @@ export default function Offers({ onBack, onOpenBoard }) {
               onClick={() => setShowWeightsEditor(true)}
               title="Adjust scoring weights"
             >
-              ⚙ Settings
+              Settings
             </button>
-            <button type="button" className="btn btn-subtle" onClick={() => onBack?.()}>
-              Back to Dashboard
+            <button type="button" className="btn btn-subtle" onClick={() => onOpenApplications?.()}>
+              Back to Applications
             </button>
           </div>
         </div>

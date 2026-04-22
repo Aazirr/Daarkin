@@ -333,7 +333,7 @@ function buildReminderCards(applications) {
   return reminders;
 }
 
-export default function Dashboard({ onOpenOffers }) {
+export default function Dashboard({ onOpenHome, onOpenOffers, navigationIntent, onNavigationIntentConsumed }) {
   const { user, token, logout } = useAuth();
 
   const [applications, setApplications] = useState([]);
@@ -466,6 +466,31 @@ export default function Dashboard({ onOpenOffers }) {
     setNotesAuthToken(token || null);
     setCompensationAuthToken(token || null);
   }, [token]);
+
+  useEffect(() => {
+    if (!navigationIntent) {
+      return;
+    }
+
+    if (navigationIntent.viewMode) {
+      setViewMode(navigationIntent.viewMode);
+    }
+
+    if (navigationIntent.statusFilter) {
+      setStatusFilter(navigationIntent.statusFilter);
+    }
+
+    if (typeof navigationIntent.importSeed === "string") {
+      setImportInput(navigationIntent.importSeed);
+    }
+
+    if (navigationIntent.focusImport) {
+      importSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      setTimeout(() => importInputRef.current?.focus(), 250);
+    }
+
+    onNavigationIntentConsumed?.();
+  }, [navigationIntent, onNavigationIntentConsumed]);
 
   const selectedApplication = useMemo(
     () => applications.find((application) => application.id === selectedApplicationId) || null,
@@ -1366,7 +1391,7 @@ export default function Dashboard({ onOpenOffers }) {
   const showFirstRunEmpty = !loading && total === 0 && !searchText.trim();
   const isBoardView = viewMode === "kanban";
 
-  function openDashboardView() {
+  function openApplicationsView() {
     setViewMode("list");
   }
 
@@ -1384,11 +1409,19 @@ export default function Dashboard({ onOpenOffers }) {
         <nav className="sidebar-nav">
           <button
             type="button"
-            className={`nav-item ${!isBoardView ? "active" : ""}`}
-            title="Dashboard"
-            onClick={openDashboardView}
+            className="nav-item"
+            title="Home"
+            onClick={() => onOpenHome?.()}
           >
-            ▦ {!sidebarCollapsed && <span>Dashboard</span>}
+            ⌂ {!sidebarCollapsed && <span>Home</span>}
+          </button>
+          <button
+            type="button"
+            className={`nav-item ${!isBoardView ? "active" : ""}`}
+            title="Applications"
+            onClick={openApplicationsView}
+          >
+            ▦ {!sidebarCollapsed && <span>Applications</span>}
           </button>
           <button
             type="button"
@@ -1950,7 +1983,8 @@ export default function Dashboard({ onOpenOffers }) {
 
       {isMobile && (
         <div className="mobile-bottom-nav">
-          <button type="button" className={`nav-item ${!isBoardView ? "active" : ""}`} onClick={openDashboardView}>▦</button>
+          <button type="button" className="nav-item" onClick={() => onOpenHome?.()}>⌂</button>
+          <button type="button" className={`nav-item ${!isBoardView ? "active" : ""}`} onClick={openApplicationsView}>▦</button>
           <button type="button" className={`nav-item ${isBoardView ? "active" : ""}`} onClick={openBoardView}>☰</button>
           <button type="button" className="nav-item" onClick={() => onOpenOffers?.()}>✦</button>
           <button type="button" className="nav-item" onClick={() => setSettingsOpen((prev) => !prev)}>⚙</button>

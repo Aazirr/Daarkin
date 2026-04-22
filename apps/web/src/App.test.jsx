@@ -10,6 +10,10 @@ vi.mock("./Landing", () => ({
   default: () => <div data-testid="landing-view">Landing View</div>,
 }));
 
+vi.mock("./Home", () => ({
+  default: () => <div data-testid="home-view">Home View</div>,
+}));
+
 vi.mock("./Dashboard", () => ({
   default: () => <div data-testid="dashboard-view">Dashboard View</div>,
 }));
@@ -35,7 +39,7 @@ describe("App routing", () => {
     expect(screen.getByText(/restoring your session/i)).toBeInTheDocument();
   });
 
-  it("renders dashboard for authenticated users", () => {
+  it("renders home for authenticated users", () => {
     useAuth.mockReturnValue({
       isAuthenticated: true,
       loading: false,
@@ -46,8 +50,9 @@ describe("App routing", () => {
 
     render(<App />);
 
-    expect(screen.getByTestId("dashboard-view")).toBeInTheDocument();
+    expect(screen.getByTestId("home-view")).toBeInTheDocument();
     expect(screen.queryByTestId("landing-view")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("dashboard-view")).not.toBeInTheDocument();
   });
 
   it("renders landing for unauthenticated users", () => {

@@ -1,17 +1,46 @@
 import { useState } from "react";
 import { useAuth } from "./hooks/useAuth";
 import Landing from "./Landing";
+import Home from "./Home";
 import Dashboard from "./Dashboard";
 import Offers from "./Offers";
 
+function createApplicationsIntent(overrides = {}) {
+  return {
+    target: "applications",
+    viewMode: "list",
+    focusImport: false,
+    importSeed: "",
+    statusFilter: "all",
+    ...overrides,
+  };
+}
+
 /**
  * Main App Router Component
- * Routes between Landing (auth), Dashboard (applications), and Offers view
+ * Routes between Landing (auth), Home, Applications, and Offers view
  * Handles session restoration from localStorage on app startup
  */
 export default function App() {
   const { isAuthenticated, loading, login, sessionExpired, clearSessionExpired } = useAuth();
-  const [currentView, setCurrentView] = useState("dashboard");
+  const [currentView, setCurrentView] = useState("home");
+  const [applicationsIntent, setApplicationsIntent] = useState(null);
+
+  function openHome() {
+    setApplicationsIntent(null);
+    setCurrentView("home");
+  }
+
+  function openApplications(intentOverrides = {}) {
+    const nextIntent = createApplicationsIntent(intentOverrides);
+    localStorage.setItem("dashboardViewMode", nextIntent.viewMode);
+    setApplicationsIntent(nextIntent);
+    setCurrentView("applications");
+  }
+
+  function openBoard() {
+    openApplications({ viewMode: "kanban" });
+  }
 
   // Show loading state while attempting to restore session from localStorage
   if (loading) {
@@ -31,21 +60,42 @@ export default function App() {
   let content = <Landing onLogin={login} />;
 
   if (isAuthenticated) {
-    if (currentView === "offers") {
+    if (currentView === "home") {
+      content = (
+        <Home
+          onOpenApplications={(intentOverrides) => openApplications(intentOverrides)}
+          onOpenBoard={openBoard}
+          onOpenOffers={() => setCurrentView("offers")}
+          onQuickImport={(importSeed) =>
+            openApplications({
+              focusImport: true,
+              importSeed,
+            })
+          }
+          onReviewFollowUps={() =>
+            openApplications({
+              statusFilter: "applied",
+            })
+          }
+        />
+      );
+    } else if (currentView === "offers") {
       content = (
         <Offers
-          onBack={() => {
-            localStorage.setItem("dashboardViewMode", "list");
-            setCurrentView("dashboard");
-          }}
-          onOpenBoard={() => {
-            localStorage.setItem("dashboardViewMode", "kanban");
-            setCurrentView("dashboard");
-          }}
+          onOpenHome={openHome}
+          onOpenApplications={() => openApplications()}
+          onOpenBoard={openBoard}
         />
       );
     } else {
-      content = <Dashboard onOpenOffers={() => setCurrentView("offers")} />;
+      content = (
+        <Dashboard
+          onOpenHome={openHome}
+          onOpenOffers={() => setCurrentView("offers")}
+          navigationIntent={applicationsIntent}
+          onNavigationIntentConsumed={() => setApplicationsIntent(null)}
+        />
+      );
     }
   }
 
