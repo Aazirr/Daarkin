@@ -7,7 +7,7 @@ import { ScoringWeightsEditor } from "./components/ScoringWeightsEditor.jsx";
 import { OfferComparison } from "./components/OfferComparison.jsx";
 import { AppMobileNav, AppSidebar } from "./components/AppNavigation.jsx";
 
-export default function Offers({ onOpenHome, onOpenApplications, onOpenBoard }) {
+export default function Offers({ theme = "dark", onToggleTheme, onOpenHome, onOpenApplications, onOpenBoard }) {
   const { user, token } = useAuth();
   const [offers, setOffers] = useState([]);
   const [selectedOfferIds, setSelectedOfferIds] = useState([]);
@@ -110,6 +110,9 @@ export default function Offers({ onOpenHome, onOpenApplications, onOpenBoard }) 
             <p className="app-subtitle">Compare your active offers side-by-side.</p>
           </div>
           <div className="app-user-actions">
+            <button type="button" className="btn btn-subtle" onClick={onToggleTheme}>
+              {theme === "dark" ? "Light Mode" : "Dark Mode"}
+            </button>
             <button
               type="button"
               className="btn btn-subtle"

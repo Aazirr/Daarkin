@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "./hooks/useAuth";
 import Landing from "./Landing";
 import Home from "./Home";
@@ -21,6 +21,21 @@ function createApplicationsIntent(overrides = {}) {
   };
 }
 
+const THEME_STORAGE_KEY = "uiTheme";
+
+function getInitialTheme() {
+  if (typeof window === "undefined") {
+    return "dark";
+  }
+
+  const stored = localStorage.getItem(THEME_STORAGE_KEY);
+  if (stored === "light" || stored === "dark") {
+    return stored;
+  }
+
+  return window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ? "dark" : "light";
+}
+
 /**
  * Main App Router Component
  * Routes between Landing (auth), Home, Applications, and Offers view
@@ -30,6 +45,16 @@ export default function App() {
   const { isAuthenticated, loading, login, sessionExpired, clearSessionExpired } = useAuth();
   const [currentView, setCurrentView] = useState("home");
   const [applicationsIntent, setApplicationsIntent] = useState(null);
+  const [theme, setTheme] = useState(getInitialTheme);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
+  }, [theme]);
+
+  function toggleTheme() {
+    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+  }
 
   function openHome() {
     setApplicationsIntent(null);
@@ -62,12 +87,14 @@ export default function App() {
   }
 
   // Authenticated users see the dashboard or offers view
-  let content = <Landing onLogin={login} />;
+  let content = <Landing onLogin={login} theme={theme} onToggleTheme={toggleTheme} />;
 
   if (isAuthenticated) {
     if (currentView === "home") {
       content = (
         <Home
+          theme={theme}
+          onToggleTheme={toggleTheme}
           onOpenApplications={(intentOverrides) => openApplications(intentOverrides)}
           onOpenBoard={openBoard}
           onOpenOffers={() => setCurrentView("offers")}
@@ -90,6 +117,8 @@ export default function App() {
     } else if (currentView === "offers") {
       content = (
         <Offers
+          theme={theme}
+          onToggleTheme={toggleTheme}
           onOpenHome={openHome}
           onOpenApplications={() => openApplications()}
           onOpenBoard={openBoard}
@@ -98,6 +127,8 @@ export default function App() {
     } else {
       content = (
         <Dashboard
+          theme={theme}
+          onToggleTheme={toggleTheme}
           onOpenHome={openHome}
           onOpenOffers={() => setCurrentView("offers")}
           navigationIntent={applicationsIntent}

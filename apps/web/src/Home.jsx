@@ -225,6 +225,8 @@ function buildHomeSummary(applications, totalCount, upcomingEvents) {
 }
 
 export default function Home({
+  theme = "dark",
+  onToggleTheme,
   onOpenApplications,
   onOpenBoard,
   onOpenOffers,
@@ -347,6 +349,9 @@ export default function Home({
           </div>
           <div className="app-user-actions">
             <span className="muted-text">{user?.email}</span>
+            <button type="button" className="btn btn-subtle" onClick={onToggleTheme}>
+              {theme === "dark" ? "Light Mode" : "Dark Mode"}
+            </button>
             <button type="button" className="btn btn-subtle" onClick={logout}>
               Logout
             </button>

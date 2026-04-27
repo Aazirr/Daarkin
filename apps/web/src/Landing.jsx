@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-export default function Landing({ onLogin }) {
+export default function Landing({ onLogin, theme = "dark", onToggleTheme }) {
   const [mode, setMode] = useState("login"); // "login" or "register"
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -81,6 +81,12 @@ export default function Landing({ onLogin }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-cream via-cream to-slate/5 flex flex-col items-center justify-center px-4 py-8 text-charcoal">
       <main className="w-full max-w-md">
+        <div className="landing-theme-toggle-wrap">
+          <button type="button" className="btn btn-subtle" onClick={onToggleTheme}>
+            {theme === "dark" ? "Light Mode" : "Dark Mode"}
+          </button>
+        </div>
+
         {/* Header */}
         <div className="mb-12 text-center">
           <div className="flex justify-center mb-4">

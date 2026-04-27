@@ -447,7 +447,14 @@ function getFocusModeMeta(focusMode) {
   }
 }
 
-export default function Dashboard({ onOpenHome, onOpenOffers, navigationIntent, onNavigationIntentConsumed }) {
+export default function Dashboard({
+  theme = "dark",
+  onToggleTheme,
+  onOpenHome,
+  onOpenOffers,
+  navigationIntent,
+  onNavigationIntentConsumed,
+}) {
   const { user, token, logout } = useAuth();
 
   const [applications, setApplications] = useState([]);
@@ -1742,6 +1749,9 @@ export default function Dashboard({ onOpenHome, onOpenOffers, navigationIntent, 
           </div>
           <div className="app-user-actions">
             <span className="muted-text">{user?.email}</span>
+            <button type="button" className="btn btn-subtle" onClick={onToggleTheme}>
+              {theme === "dark" ? "Light Mode" : "Dark Mode"}
+            </button>
             <button type="button" className="btn btn-subtle" onClick={logout}>
               Logout
             </button>
