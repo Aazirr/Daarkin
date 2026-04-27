@@ -360,6 +360,31 @@ export default function Home({
 
         {error ? <div className="alert alert-error">{error}</div> : null}
 
+        <section className="home-command-panel" aria-label="Quick capture and next step">
+          <div className="home-command-copy">
+            <p className="metric-label">Next Move</p>
+            <h2>{summary.reminders[0]?.title || "Keep the pipeline moving"}</h2>
+            <p className="muted-text">
+              {summary.reminders[0]?.body || "Save a fresh lead, review the board, or compare active offers from one place."}
+            </p>
+          </div>
+
+          <form onSubmit={handleQuickImportSubmit} className="home-command-form">
+            <input
+              className="input"
+              value={quickImportInput}
+              onChange={(event) => setQuickImportInput(event.target.value)}
+              placeholder="Paste a job URL or company name"
+            />
+            <button type="submit" className="btn btn-primary">
+              Start Import
+            </button>
+            <button type="button" className="btn btn-subtle" onClick={() => onOpenApplications?.()}>
+              Open Applications
+            </button>
+          </form>
+        </section>
+
         <section className="home-stats-grid" aria-label="Home overview statistics">
           {STAT_DEFINITIONS.map((definition) => (
             <button
@@ -407,41 +432,36 @@ export default function Home({
           ))}
         </section>
 
-        <section className="home-main-grid">
-          <div className="stack-sm">
-            <section className="panel home-chart-panel">
-              <div className="panel-header">
-                <div>
-                  <h2>Search Activity</h2>
-                  <p className="muted-text">Applications captured over the last 7 days.</p>
-                </div>
+        <section className="home-workbench-grid">
+          <section className="panel home-activity-panel">
+            <div className="panel-header">
+              <div>
+                <h2>Search Activity</h2>
+                <p className="muted-text">Applications captured over the last 7 days.</p>
               </div>
+            </div>
 
-              <div className="activity-chart" aria-label="Search activity chart">
-                {summary.activity.map((day) => (
-                  <div key={day.key} className="activity-bar-group">
-                    <div className="activity-bar-rail">
-                      <div
-                        className="activity-bar-fill"
-                        style={{ height: `${Math.max(8, (day.count / highestActivity) * 100)}%` }}
-                        title={`${day.label}: ${day.count}`}
-                      />
-                    </div>
-                    <span className="activity-bar-label">{day.label}</span>
-                    <span className="activity-bar-count mono-text">{day.count}</span>
+            <div className="activity-chart" aria-label="Search activity chart">
+              {summary.activity.map((day) => (
+                <div key={day.key} className="activity-bar-group">
+                  <div className="activity-bar-rail">
+                    <div
+                      className="activity-bar-fill"
+                      style={{ height: `${Math.max(8, (day.count / highestActivity) * 100)}%` }}
+                      title={`${day.label}: ${day.count}`}
+                    />
                   </div>
-                ))}
-              </div>
-            </section>
-
-            <section className="panel">
-              <div className="panel-header">
-                <div>
-                  <h2>Aging Applications</h2>
-                  <p className="muted-text">Follow-up opportunities by application age.</p>
+                  <span className="activity-bar-label">{day.label}</span>
+                  <span className="activity-bar-count mono-text">{day.count}</span>
                 </div>
-              </div>
+              ))}
+            </div>
 
+            <div className="home-aging-strip" aria-label="Aging applications">
+              <div>
+                <p className="metric-label">Aging Applications</p>
+                <p className="muted-text">Follow-up opportunities by application age.</p>
+              </div>
               <div className="home-aging-grid">
                 <button
                   type="button"
@@ -468,105 +488,79 @@ export default function Home({
                   <strong className="mono-text">{summary.aging.threeWeeks}</strong>
                 </button>
               </div>
-            </section>
-          </div>
+            </div>
+          </section>
 
-          <div className="stack-sm">
-            <section className="panel">
-              <div className="panel-header">
-                <div>
-                  <h2>Upcoming and Reminders</h2>
-                  <p className="muted-text">The clearest items to act on next.</p>
-                </div>
+          <section className="panel home-reminders-panel">
+            <div className="panel-header">
+              <div>
+                <h2>Upcoming and Reminders</h2>
+                <p className="muted-text">The clearest items to act on next.</p>
               </div>
+            </div>
 
-              <div className="stack-sm">
-                {summary.reminders.length ? (
-                  summary.reminders.map((reminder) => (
-                    <article key={reminder.id} className="home-reminder-card">
+            <div className="home-reminder-list">
+              {summary.reminders.length ? (
+                summary.reminders.map((reminder) => (
+                  <article key={reminder.id} className="home-reminder-card">
+                    <div>
                       <h3>{reminder.title}</h3>
                       <p>{reminder.body}</p>
-                      <button
-                        type="button"
-                        className="btn btn-subtle"
-                        onClick={() => handleReminderAction(reminder.intent)}
-                      >
-                        {reminder.action}
-                      </button>
-                    </article>
-                  ))
-                ) : (
-                  <div className="empty-state">
-                    <p>No urgent reminders right now.</p>
-                  </div>
-                )}
-              </div>
-            </section>
-
-            <section className="panel">
-              <div className="panel-header">
-                <div>
-                  <h2>Recommended Actions</h2>
-                  <p className="muted-text">Jump into the next best workflow.</p>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-subtle"
+                      onClick={() => handleReminderAction(reminder.intent)}
+                    >
+                      {reminder.action}
+                    </button>
+                  </article>
+                ))
+              ) : (
+                <div className="empty-state home-empty-state">
+                  <p>No urgent reminders right now.</p>
                 </div>
-              </div>
+              )}
+            </div>
+          </section>
 
-              <div className="home-actions-grid">
-                <button type="button" className="home-action-card" onClick={() => onOpenApplications?.()}>
-                  <strong>View Applications</strong>
-                  <span>Open your full pipeline workspace.</span>
-                </button>
-                <button type="button" className="home-action-card" onClick={() => onQuickImport?.("")}>
-                  <strong>Save an Application</strong>
-                  <span>Jump straight into the capture flow.</span>
-                </button>
-                <button
-                  type="button"
-                  className="home-action-card"
-                  onClick={() =>
-                    onOpenApplications?.({
-                      focusMode: "follow-ups",
-                      pageSize: 100,
-                      sortOrder: "asc",
-                    })
-                  }
-                >
-                  <strong>Review Follow-Ups</strong>
-                  <span>See aging items and stalled conversations.</span>
-                </button>
-                <button type="button" className="home-action-card" onClick={() => onOpenOffers?.()}>
-                  <strong>Check Offers</strong>
-                  <span>Compare active offer-stage opportunities.</span>
-                </button>
+          <section className="panel home-actions-panel">
+            <div className="panel-header">
+              <div>
+                <h2>Recommended Actions</h2>
+                <p className="muted-text">Jump into the next best workflow.</p>
               </div>
-            </section>
+            </div>
 
-            <section className="panel">
-              <div className="panel-header">
-                <div>
-                  <h2>Quick Import</h2>
-                  <p className="muted-text">Paste a URL or company name and continue in Applications.</p>
-                </div>
-              </div>
-
-              <form onSubmit={handleQuickImportSubmit} className="home-quick-import">
-                <input
-                  className="input"
-                  value={quickImportInput}
-                  onChange={(event) => setQuickImportInput(event.target.value)}
-                  placeholder="Paste a job URL or company name"
-                />
-                <div className="row-actions">
-                  <button type="submit" className="btn btn-primary">
-                    Start Import
-                  </button>
-                  <button type="button" className="btn btn-subtle" onClick={() => onOpenApplications?.()}>
-                    Open Applications
-                  </button>
-                </div>
-              </form>
-            </section>
-          </div>
+            <div className="home-actions-grid">
+              <button type="button" className="home-action-card" onClick={() => onOpenApplications?.()}>
+                <strong>View Applications</strong>
+                <span>Open your full pipeline workspace.</span>
+              </button>
+              <button type="button" className="home-action-card" onClick={() => onQuickImport?.("")}>
+                <strong>Save an Application</strong>
+                <span>Jump straight into the capture flow.</span>
+              </button>
+              <button
+                type="button"
+                className="home-action-card"
+                onClick={() =>
+                  onOpenApplications?.({
+                    focusMode: "follow-ups",
+                    pageSize: 100,
+                    sortOrder: "asc",
+                  })
+                }
+              >
+                <strong>Review Follow-Ups</strong>
+                <span>See aging items and stalled conversations.</span>
+              </button>
+              <button type="button" className="home-action-card" onClick={() => onOpenOffers?.()}>
+                <strong>Check Offers</strong>
+                <span>Compare active offer-stage opportunities.</span>
+              </button>
+            </div>
+          </section>
         </section>
       </main>
 

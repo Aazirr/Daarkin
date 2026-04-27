@@ -1506,7 +1506,8 @@ export default function Dashboard({
     );
   }
 
-  function renderApplicationCard(application) {
+  function renderApplicationCard(application, view = "list") {
+    const isKanban = view === "kanban";
     const stale = staleDays(application);
     const isStale = stale !== null && stale > 14;
     const selected = selectedApplicationId === application.id;
@@ -1515,7 +1516,7 @@ export default function Dashboard({
     return (
       <article
         key={application.id}
-        className={`application-row row-anim ${selected ? "row-selected" : ""} ${isStale ? "row-stale" : ""} ${focused ? "row-focused" : ""}`}
+        className={`application-row row-anim ${isKanban ? "application-row-kanban" : ""} ${selected ? "row-selected" : ""} ${isStale ? "row-stale" : ""} ${focused ? "row-focused" : ""}`}
         onClick={() => openDetails(application.id)}
         onFocus={() => setFocusedApplicationId(application.id)}
         onContextMenu={(event) => {
@@ -1531,11 +1532,11 @@ export default function Dashboard({
             <p className="role-text">{highlightText(application.positionTitle, searchText)}</p>
             <div className="meta-line">
               <span>{highlightText(application.location || "Unknown location", searchText)}</span>
-              <span className="mono-text">Applied {formatDate(application.appliedAt)}</span>
+              {!isKanban ? <span className="mono-text">Applied {formatDate(application.appliedAt)}</span> : null}
               <span className="mono-text">Updated {formatDate(application.updatedAt)}</span>
               {isStale ? <span className="attention-dot">Needs attention</span> : null}
             </div>
-            <div className="shortcut-hint">Enter: open, S: status, N: notes</div>
+            {!isKanban ? <div className="shortcut-hint">Enter: open, S: status, N: notes</div> : null}
           </div>
         </div>
 
@@ -2238,7 +2239,7 @@ export default function Dashboard({
               </div>
             ) : viewMode === "list" ? (
               <div className="application-list list-transition">
-                {visibleApplications.map(renderApplicationCard)}
+                {visibleApplications.map((application) => renderApplicationCard(application, "list"))}
               </div>
             ) : (
               <div className="kanban-grid">
@@ -2249,7 +2250,7 @@ export default function Dashboard({
                       {groupedForKanban[status].length === 0 ? (
                         <div className="kanban-empty">No items</div>
                       ) : (
-                        groupedForKanban[status].map(renderApplicationCard)
+                        groupedForKanban[status].map((application) => renderApplicationCard(application, "kanban"))
                       )}
                     </div>
                   </section>
