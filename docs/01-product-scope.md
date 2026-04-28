@@ -25,11 +25,11 @@ Provide a simple, focused system that tracks the lifecycle of every job applicat
 6. Responsive web UI.
 7. User authentication (register, login, logout).
 8. Per-user data isolation (users only see their own applications).
+9. Gmail inbox integration for automatic status tracking.
 
 ## Out of Scope for MVP
 - Multi-user collaboration/sharing (each user has isolated data).
 - Resume/cover letter storage.
-- Email integration.
 - Browser extension autofill.
 - Analytics dashboards beyond basic counts.
 - Social features (no commenting, teams, etc.).
@@ -41,7 +41,7 @@ Provide a simple, focused system that tracks the lifecycle of every job applicat
 2. Job URL autofill.
 	- User pastes a job URL and the app pre-fills company, role, location, and job metadata.
 	- Include confidence indicators and editable fields before save.
-3. Gmail/Outlook inbox integration.
+3. Outlook inbox integration.
 	- Connect mailbox to detect application-related emails.
 	- Suggest status updates and timeline events from recruiter/company messages.
 

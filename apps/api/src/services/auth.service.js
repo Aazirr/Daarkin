@@ -1,7 +1,7 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { registerSchema, loginSchema } from "../schemas/auth.schema.js";
-import { createUser, getUserByEmail } from "../repositories/users.repository.js";
+import { createUser, getUserByEmail, getUserById } from "../repositories/users.repository.js";
 import { createLogger } from "../utils/logger.js";
 import { JWT_SECRET, jwtOptions } from "../config/jwt.js";
 
@@ -84,4 +84,21 @@ export function verifyToken(token) {
     logger.warn("Token verification failed", { error: error.message });
     return null;
   }
+}
+
+export async function getAuthProfile(userId) {
+  const user = await getUserById(userId);
+  if (!user) {
+    return null;
+  }
+
+  return {
+    id: user.id,
+    email: user.email,
+    google: {
+      connected: Boolean(user.googleId),
+      email: user.googleEmail ?? null,
+      connectedAt: user.googleConnectedAt ?? null,
+    },
+  };
 }

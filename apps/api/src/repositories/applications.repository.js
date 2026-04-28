@@ -1,5 +1,6 @@
 import { pool } from "../config/db.js";
 import { createLogger } from "../utils/logger.js";
+import { createStatusHistoryEntry, listStatusHistory } from "./application-status-history.repository.js";
 
 const logger = createLogger("applications-repository");
 
@@ -139,7 +140,7 @@ export async function getApplicationById(id, userId) {
   return result.rows[0] ? mapApplicationRow(result.rows[0]) : null;
 }
 
-export async function createApplication(userId, input) {
+export async function createApplication(userId, input, options = {}) {
   logger.info("Executing create application query", {
     userId,
     companyName: input.companyName,
@@ -172,10 +173,20 @@ export async function createApplication(userId, input) {
   );
 
   logger.info("Create application query completed", { userId, id: result.rows[0].id });
-  return mapApplicationRow(result.rows[0]);
+  const application = mapApplicationRow(result.rows[0]);
+
+  await createStatusHistoryEntry(userId, {
+    applicationId: application.id,
+    previousStatus: null,
+    nextStatus: application.status,
+    source: options.source ?? "manual",
+    note: options.note ?? "Initial status",
+  });
+
+  return application;
 }
 
-export async function updateApplication(id, userId, input) {
+export async function updateApplication(id, userId, input, options = {}) {
   logger.info("Executing update application flow", { id, userId, fields: Object.keys(input) });
   const current = await getApplicationById(id, userId);
 
@@ -223,7 +234,19 @@ export async function updateApplication(id, userId, input) {
   );
 
   logger.info("Update application query completed", { id, userId });
-  return mapApplicationRow(result.rows[0]);
+  const application = mapApplicationRow(result.rows[0]);
+
+  if (current.status !== application.status) {
+    await createStatusHistoryEntry(userId, {
+      applicationId: id,
+      previousStatus: current.status,
+      nextStatus: application.status,
+      source: options.source ?? "manual",
+      note: options.note ?? null,
+    });
+  }
+
+  return application;
 }
 
 export async function deleteApplication(id, userId) {
@@ -234,4 +257,28 @@ export async function deleteApplication(id, userId) {
   );
   logger.info("Delete application query completed", { id, userId, deleted: result.rowCount > 0 });
   return result.rowCount > 0;
+}
+
+export async function listApplicationsForMatching(userId) {
+  logger.info("Loading applications for email matching", { userId });
+  const result = await pool.query(
+    `
+      SELECT id, company_name, position_title, status
+      FROM applications
+      WHERE user_id = $1
+      ORDER BY updated_at DESC
+    `,
+    [userId]
+  );
+
+  return result.rows.map((row) => ({
+    id: row.id,
+    companyName: row.company_name,
+    positionTitle: row.position_title,
+    status: row.status,
+  }));
+}
+
+export async function listApplicationStatusHistory(userId, limit = 20) {
+  return listStatusHistory(userId, limit);
 }

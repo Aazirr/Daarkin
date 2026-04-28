@@ -9,6 +9,7 @@ import {
   createApplication,
   deleteApplication,
   getApplicationById,
+  listApplicationStatusHistory,
   listApplications,
   updateApplication,
 } from "../repositories/applications.repository.js";
@@ -106,15 +107,20 @@ export async function createNewApplication(userId, body) {
     companyName: body.companyName,
     positionTitle: body.positionTitle,
   });
-  return createApplication(userId, normalizeCreatePayload(body));
+  return createApplication(userId, normalizeCreatePayload(body), { source: "manual", note: "Created manually" });
 }
 
 export async function updateExistingApplication(id, userId, body) {
   logger.info("Normalizing update payload", { id, userId, fields: Object.keys(body) });
-  return updateApplication(id, userId, normalizeUpdatePayload(body));
+  return updateApplication(id, userId, normalizeUpdatePayload(body), { source: "manual" });
 }
 
 export async function removeApplication(id, userId) {
   logger.info("Removing application from repository", { id, userId });
   return deleteApplication(id, userId);
+}
+
+export async function getStatusHistory(userId, limit = 20) {
+  logger.info("Loading application status history", { userId, limit });
+  return listApplicationStatusHistory(userId, limit);
 }

@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "./hooks/useAuth";
 import { AppMobileNav, AppSidebar } from "./components/AppNavigation.jsx";
-import { fetchApplications, setAuthToken as setApplicationsAuthToken } from "./services/applications-api.js";
+import {
+  fetchApplications,
+  fetchStatusHistory,
+  setAuthToken as setApplicationsAuthToken,
+} from "./services/applications-api.js";
 import { fetchUpcomingEvents, setAuthToken as setEventsAuthToken } from "./services/events-api.js";
 import {
   addDaysToAppDateKey,
@@ -241,6 +245,7 @@ export default function Home({
   const [error, setError] = useState("");
   const [quickImportInput, setQuickImportInput] = useState("");
   const [upcomingEvents, setUpcomingEvents] = useState([]);
+  const [statusHistory, setStatusHistory] = useState([]);
 
   useEffect(() => {
     localStorage.setItem("sidebarCollapsed", sidebarCollapsed ? "1" : "0");
@@ -259,7 +264,7 @@ export default function Home({
       setError("");
 
       try {
-        const [result, upcomingResult] = await Promise.all([
+        const [result, upcomingResult, historyResult] = await Promise.all([
           fetchApplications({
             sortBy: "updatedAt",
             sortOrder: "desc",
@@ -267,6 +272,7 @@ export default function Home({
             pageSize: 100,
           }),
           fetchUpcomingEvents(2),
+          fetchStatusHistory(15),
         ]);
 
         if (cancelled) {
@@ -276,6 +282,7 @@ export default function Home({
         setApplications(result.data?.applications || []);
         setTotalCount(result.meta?.pagination?.total || 0);
         setUpcomingEvents(upcomingResult.events || []);
+        setStatusHistory(historyResult.history || []);
       } catch (loadError) {
         if (!cancelled) {
           setError(loadError.message || "Failed to load your home summary.");
@@ -307,6 +314,13 @@ export default function Home({
   const summaryLine = summary.reminders[0]
     ? `${summary.reminders.length} guided checks are ready for review today.`
     : "Your search snapshot is calm right now. Keep the momentum going.";
+
+  function formatStatusLabel(status) {
+    if (!status) {
+      return "Unknown";
+    }
+    return status.charAt(0).toUpperCase() + status.slice(1);
+  }
 
   function handleQuickImportSubmit(event) {
     event.preventDefault();
@@ -559,6 +573,42 @@ export default function Home({
                 <strong>Check Offers</strong>
                 <span>Compare active offer-stage opportunities.</span>
               </button>
+            </div>
+          </section>
+
+          <section className="panel home-reminders-panel">
+            <div className="panel-header">
+              <div>
+                <h2>Status History</h2>
+                <p className="muted-text">Recent status changes from manual edits and email auto-updates.</p>
+              </div>
+            </div>
+
+            <div className="home-reminder-list">
+              {statusHistory.length ? (
+                statusHistory.map((entry) => (
+                  <article key={entry.id} className="home-reminder-card">
+                    <div>
+                      <h3>
+                        {entry.companyName} - {entry.positionTitle}
+                      </h3>
+                      <p>
+                        {entry.previousStatus ? formatStatusLabel(entry.previousStatus) : "None"} to{" "}
+                        {formatStatusLabel(entry.nextStatus)}
+                      </p>
+                      <p className="muted-text">
+                        Source: {entry.source === "email_auto" ? "Email Auto-Update" : "Manual"} •{" "}
+                        {formatDateTimeInAppTimeZone(entry.createdAt)}
+                      </p>
+                      {entry.note ? <p className="muted-text">{entry.note}</p> : null}
+                    </div>
+                  </article>
+                ))
+              ) : (
+                <div className="empty-state home-empty-state">
+                  <p>No recent status updates yet.</p>
+                </div>
+              )}
             </div>
           </section>
         </section>

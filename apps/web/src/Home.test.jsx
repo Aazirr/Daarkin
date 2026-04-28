@@ -8,6 +8,7 @@ vi.mock("./hooks/useAuth", () => ({
 
 vi.mock("./services/applications-api.js", () => ({
   fetchApplications: vi.fn(),
+  fetchStatusHistory: vi.fn(),
   setAuthToken: vi.fn(),
 }));
 
@@ -17,7 +18,7 @@ vi.mock("./services/events-api.js", () => ({
 }));
 
 import { useAuth } from "./hooks/useAuth";
-import { fetchApplications } from "./services/applications-api.js";
+import { fetchApplications, fetchStatusHistory } from "./services/applications-api.js";
 import { fetchUpcomingEvents } from "./services/events-api.js";
 
 describe("Home", () => {
@@ -60,6 +61,10 @@ describe("Home", () => {
 
     fetchUpcomingEvents.mockResolvedValue({
       events: [],
+    });
+
+    fetchStatusHistory.mockResolvedValue({
+      history: [],
     });
   });
 

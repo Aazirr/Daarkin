@@ -10,6 +10,7 @@ import compensationRoutes from "./routes/compensation.routes.js";
 import scoringWeightsRoutes from "./routes/scoring-weights.routes.js";
 import offersRoutes from "./routes/offers.routes.js";
 import applicationEventsRoutes from "./routes/application-events.routes.js";
+import integrationsRoutes from "./routes/integrations.routes.js";
 import { errorHandler } from "./middlewares/error-handler.js";
 import { createLogger } from "./utils/logger.js";
 import { sendError } from "./utils/http-response.js";
@@ -60,6 +61,7 @@ app.use("/api", offersRoutes);
 app.use("/api", applicationsRoutes);
 app.use("/api", notesRoutes);
 app.use("/api", applicationEventsRoutes);
+app.use("/api", integrationsRoutes);
 
 app.use((req, res) => {
   logger.warn(`Route not found: ${req.method} ${req.originalUrl}`, {

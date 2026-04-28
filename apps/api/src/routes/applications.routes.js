@@ -9,6 +9,7 @@ import {
   validateCreatePayload,
   validateListQuery,
   validateUpdatePayload,
+  getStatusHistory,
 } from "../services/applications.service.js";
 import { extractJobDataFromUrl, calculateOverallConfidence } from "../services/url-extraction.service.js";
 import { authMiddleware } from "../middlewares/auth-middleware.js";
@@ -97,6 +98,17 @@ router.get("/applications", async (req, res, next) => {
         statusCounts,
       }
     );
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.get("/status-history", async (req, res, next) => {
+  try {
+    const rawLimit = Number.parseInt(String(req.query.limit ?? "20"), 10);
+    const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(rawLimit, 1), 100) : 20;
+    const history = await getStatusHistory(req.userId, limit);
+    return sendSuccess(res, { history });
   } catch (error) {
     return next(error);
   }

@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getGoogleLoginUrl } from "./services/auth-api";
 
-export default function Landing({ onLogin, theme = "dark", onToggleTheme }) {
+export default function Landing({ onLogin, theme = "dark", onToggleTheme, initialError = "" }) {
   const [mode, setMode] = useState("login"); // "login" or "register"
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -8,6 +9,12 @@ export default function Landing({ onLogin, theme = "dark", onToggleTheme }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  useEffect(() => {
+    if (initialError) {
+      setError(initialError);
+    }
+  }, [initialError]);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -59,6 +66,20 @@ export default function Landing({ onLogin, theme = "dark", onToggleTheme }) {
     } catch (fetchError) {
       const message = fetchError.message || "Network error. Please try again.";
       setError(message);
+      setLoading(false);
+    }
+  }
+
+  async function handleGoogleLogin() {
+    setError("");
+    setSuccess("");
+    setLoading(true);
+
+    try {
+      const authUrl = await getGoogleLoginUrl();
+      window.location.assign(authUrl);
+    } catch (googleError) {
+      setError(googleError.message || "Google login failed.");
       setLoading(false);
     }
   }
@@ -192,6 +213,14 @@ export default function Landing({ onLogin, theme = "dark", onToggleTheme }) {
               className="w-full rounded-lg bg-gradient-to-r from-slate to-slate px-4 py-3.5 text-sm font-bold text-white transition hover:shadow-lg-soft shadow-md-soft disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? (mode === "login" ? "Logging in..." : "Creating account...") : (mode === "login" ? "Login" : "Create Account")}
+            </button>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={handleGoogleLogin}
+              className="w-full rounded-lg border border-slate/20 bg-white px-4 py-3.5 text-sm font-bold text-slate transition hover:bg-slate/5 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Continue with Google
             </button>
           </form>
 

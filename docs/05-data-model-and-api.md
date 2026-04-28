@@ -49,6 +49,13 @@ Base route: `/api`
 - `POST /applications/:id/notes`
 - `DELETE /applications/:id/notes/:noteId`
 
+### Gmail Integration
+- `GET /integrations/gmail/connect`
+- `GET /integrations/gmail/callback`
+- `POST /integrations/gmail/sync`
+- `DELETE /integrations/gmail`
+- `GET /applications/:id/email-events`
+
 ## Example Application Payload
 
 ```json
@@ -107,11 +114,11 @@ Base route: `/api`
   - `normalized_payload_json` (jsonb)
   - `created_at`
 
-### Gmail/Outlook Integration
+### Outlook Integration (planned)
 - `email_integrations`
   - `id` (uuid, pk)
   - `user_id` (uuid, fk -> users.id)
-  - `provider` (text, values: gmail|outlook)
+  - `provider` (text, values: outlook)
   - `encrypted_access_token` (text)
   - `encrypted_refresh_token` (text)
   - `token_expires_at` (timestamp)
@@ -139,8 +146,6 @@ Base route: `/api`
   - Output: normalized application draft + field confidence map
 
 ### Inbox Integrations
-- `POST /integrations/gmail/connect`
 - `POST /integrations/outlook/connect`
 - `DELETE /integrations/:provider`
 - `POST /integrations/:provider/sync`
-- `GET /applications/:id/email-events`

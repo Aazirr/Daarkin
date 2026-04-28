@@ -36,6 +36,12 @@ function getInitialTheme() {
   return window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ? "dark" : "light";
 }
 
+function decodeBase64Url(value: string): string {
+  const base64 = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+  return atob(padded);
+}
+
 /**
  * Main App Router Component
  * Routes between Landing (auth), Home, Applications, and Offers view
@@ -46,6 +52,7 @@ export default function App() {
   const [currentView, setCurrentView] = useState("home");
   const [applicationsIntent, setApplicationsIntent] = useState(null);
   const [theme, setTheme] = useState(getInitialTheme);
+  const [oauthError, setOauthError] = useState("");
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -72,6 +79,46 @@ export default function App() {
     openApplications({ viewMode: "kanban" });
   }
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const provider = params.get("authProvider");
+    const tokenFromQuery = params.get("token");
+    const userFromQuery = params.get("user");
+    const errorFromQuery = params.get("error");
+
+    if (provider !== "google") {
+      return;
+    }
+
+    if (errorFromQuery) {
+      setOauthError(errorFromQuery);
+      params.delete("authProvider");
+      params.delete("error");
+      const cleanQuery = params.toString();
+      window.history.replaceState({}, "", `${window.location.pathname}${cleanQuery ? `?${cleanQuery}` : ""}`);
+      return;
+    }
+
+    if (!tokenFromQuery || !userFromQuery) {
+      return;
+    }
+
+    try {
+      const userJson = decodeBase64Url(userFromQuery);
+      const parsedUser = JSON.parse(userJson);
+      login(tokenFromQuery, parsedUser);
+      setOauthError("");
+    } catch {
+      setOauthError("Google login completed, but session parsing failed. Please try again.");
+    } finally {
+      params.delete("authProvider");
+      params.delete("token");
+      params.delete("user");
+      const cleanQuery = params.toString();
+      window.history.replaceState({}, "", `${window.location.pathname}${cleanQuery ? `?${cleanQuery}` : ""}`);
+    }
+  }, [login]);
+
   // Show loading state while attempting to restore session from localStorage
   if (loading) {
     return (
@@ -87,7 +134,7 @@ export default function App() {
   }
 
   // Authenticated users see the dashboard or offers view
-  let content = <Landing onLogin={login} theme={theme} onToggleTheme={toggleTheme} />;
+  let content = <Landing onLogin={login} theme={theme} onToggleTheme={toggleTheme} initialError={oauthError} />;
 
   if (isAuthenticated) {
     if (currentView === "home") {

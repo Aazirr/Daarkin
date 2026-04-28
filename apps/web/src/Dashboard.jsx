@@ -28,6 +28,7 @@ import {
   setAuthToken as setEventsAuthToken,
   updateApplicationEvent,
 } from "./services/events-api.js";
+import { getAuthProfile, getGoogleLinkUrl } from "./services/auth-api";
 import { AppMobileNav, AppSidebar } from "./components/AppNavigation.jsx";
 import {
   appDateTimeLocalToIso,
@@ -547,6 +548,13 @@ export default function Dashboard({
     }
   });
   const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);
+  const [googleLinking, setGoogleLinking] = useState(false);
+  const [googleStatus, setGoogleStatus] = useState({
+    loading: false,
+    connected: false,
+    email: null,
+    connectedAt: null,
+  });
 
   const importInputRef = useRef(null);
   const importSectionRef = useRef(null);
@@ -572,6 +580,52 @@ export default function Dashboard({
     const promptDismissed = localStorage.getItem("notificationPromptDismissed") === "1";
     setShowNotificationPrompt(applications.length >= 3 && !notificationPrefs.pushEnabled && !promptDismissed);
   }, [applications.length, notificationPrefs.pushEnabled]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("googleLinked") !== "1") {
+      return;
+    }
+
+    setMessage("Google account connected successfully.");
+    params.delete("googleLinked");
+    const cleanQuery = params.toString();
+    window.history.replaceState({}, "", `${window.location.pathname}${cleanQuery ? `?${cleanQuery}` : ""}`);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAuthProfile() {
+      if (!token) {
+        return;
+      }
+
+      setGoogleStatus((prev) => ({ ...prev, loading: true }));
+      try {
+        const profile = await getAuthProfile(token);
+        if (cancelled) {
+          return;
+        }
+        setGoogleStatus({
+          loading: false,
+          connected: profile.google.connected,
+          email: profile.google.email,
+          connectedAt: profile.google.connectedAt,
+        });
+      } catch {
+        if (!cancelled) {
+          setGoogleStatus((prev) => ({ ...prev, loading: false }));
+        }
+      }
+    }
+
+    loadAuthProfile();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
 
   useEffect(() => {
     if (tourStep === 0) {
@@ -1052,6 +1106,24 @@ export default function Dashboard({
 
     URL.revokeObjectURL(url);
     setMessage("CSV export downloaded.");
+  }
+
+  async function handleConnectGoogleAccount() {
+    if (!token) {
+      setError("You must be logged in to connect Google.");
+      return;
+    }
+
+    setError("");
+    setGoogleLinking(true);
+
+    try {
+      const authUrl = await getGoogleLinkUrl(token);
+      window.location.assign(authUrl);
+    } catch (connectError) {
+      setError(connectError.message || "Failed to connect Google account.");
+      setGoogleLinking(false);
+    }
   }
 
   function nextTourStep() {
@@ -2076,6 +2148,15 @@ export default function Dashboard({
             </div>
 
             <div className="settings-grid">
+              <div className="toggle-row">
+                <span>Google Account</span>
+                <span className={`status-pill ${googleStatus.connected ? "status-offer" : "status-applied"}`}>
+                  {googleStatus.loading ? "Checking..." : googleStatus.connected ? "Connected" : "Not Connected"}
+                </span>
+              </div>
+              {googleStatus.connected && googleStatus.email ? (
+                <p className="muted-text">Connected as {googleStatus.email}</p>
+              ) : null}
               <label className="toggle-row">
                 <input type="checkbox" checked={notificationPrefs.pushEnabled} onChange={() => toggleReminderPref("pushEnabled")} />
                 <span>Enable push reminders</span>
@@ -2100,6 +2181,9 @@ export default function Dashboard({
 
             <div className="row-actions">
               <button type="button" className="btn btn-primary" onClick={handleCsvExport}>Export CSV</button>
+              <button type="button" className="btn btn-subtle" onClick={handleConnectGoogleAccount} disabled={googleLinking}>
+                {googleLinking ? "Connecting..." : "Connect Google Account"}
+              </button>
             </div>
             <p className="muted-text">Reminder emails always include one-click unsubscribe link.</p>
           </section>

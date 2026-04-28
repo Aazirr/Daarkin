@@ -13,6 +13,16 @@ export interface AuthResponse {
   token: string;
 }
 
+export interface AuthProfile {
+  id: string;
+  email: string;
+  google: {
+    connected: boolean;
+    email: string | null;
+    connectedAt: string | null;
+  };
+}
+
 export interface ApiErrorResponse {
   success: false;
   error: {
@@ -66,6 +76,50 @@ export async function loginUser(email: string, password: string): Promise<AuthRe
   }
 
   return (data as ApiSuccessResponse<AuthResponse>).data;
+}
+
+export async function getGoogleLoginUrl(): Promise<string> {
+  const response = await fetch(`${API_BASE}/auth/google/start`);
+  const data: ApiSuccessResponse<{ authUrl: string }> | ApiErrorResponse = await response.json();
+
+  if (!response.ok || !data.success) {
+    const error = data as ApiErrorResponse;
+    throw new Error(error.error?.message || "Google login start failed");
+  }
+
+  return (data as ApiSuccessResponse<{ authUrl: string }>).data.authUrl;
+}
+
+export async function getGoogleLinkUrl(token: string): Promise<string> {
+  const response = await fetch(`${API_BASE}/auth/google/link/start`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  const data: ApiSuccessResponse<{ authUrl: string }> | ApiErrorResponse = await response.json();
+
+  if (!response.ok || !data.success) {
+    const error = data as ApiErrorResponse;
+    throw new Error(error.error?.message || "Google link start failed");
+  }
+
+  return (data as ApiSuccessResponse<{ authUrl: string }>).data.authUrl;
+}
+
+export async function getAuthProfile(token: string): Promise<AuthProfile> {
+  const response = await fetch(`${API_BASE}/auth/me`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  const data: ApiSuccessResponse<{ user: AuthProfile }> | ApiErrorResponse = await response.json();
+
+  if (!response.ok || !data.success) {
+    const error = data as ApiErrorResponse;
+    throw new Error(error.error?.message || "Failed to fetch auth profile");
+  }
+
+  return (data as ApiSuccessResponse<{ user: AuthProfile }>).data.user;
 }
 
 /**

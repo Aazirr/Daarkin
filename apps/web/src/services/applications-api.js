@@ -198,3 +198,7 @@ export async function extractFromUrl(url) {
     body: JSON.stringify({ url }),
   });
 }
+
+export async function fetchStatusHistory(limit = 20) {
+  return request(`/status-history?limit=${limit}`);
+}
